@@ -866,22 +866,34 @@ function solicitarPermissaoNotificacao() {
 }
 
 function dispararNotificacao(titulo, corpo) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  console.log("Tentando disparar notificação:", titulo);
   
-  // Tenta vibrar o celular (apenas se suportado)
-  if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
-  
-  // Som de alerta
-  beep(1000, 1500, 0.5, 0.1);
+  // Som de alerta (tenta tocar sempre)
+  beep(880, 1320, 0.6, 0.15);
 
-  const options = {
-    body: corpo,
-    icon: 'https://cdn-icons-png.flaticon.com/512/2821/2821012.png', // Ícone genérico de barbearia
-    badge: 'https://cdn-icons-png.flaticon.com/512/2821/2821012.png',
-    vibrate: [200, 100, 200]
-  };
-  
-  new Notification(titulo, options);
+  if (!("Notification" in window)) {
+    console.warn("Navegador não suporta notificações.");
+    return;
+  }
+
+  if (Notification.permission === "granted") {
+    if ("vibrate" in navigator) navigator.vibrate([500, 110, 500]);
+    
+    const options = {
+      body: corpo,
+      icon: 'https://cdn-icons-png.flaticon.com/512/2821/2821012.png',
+      badge: 'https://cdn-icons-png.flaticon.com/512/2821/2821012.png',
+      vibrate: [500, 110, 500],
+      requireInteraction: true // Mantém a notificação até o usuário interagir
+    };
+    
+    const n = new Notification(titulo, options);
+    n.onclick = () => { window.focus(); n.close(); };
+  } else {
+    console.warn("Permissão de notificação não concedida:", Notification.permission);
+    // Fallback: Se não tem permissão de barra, usa o toast em destaque
+    toast("🔔 " + titulo + ": " + corpo, "success");
+  }
 }
 
 // Listener em tempo real para o barbeiro
@@ -1588,20 +1600,18 @@ async function confirmarAgendamento() {
     const msgCliente = `Olá ${sessao.nome}! Seu horário foi agendado com sucesso na BLADE CUT.\n\n✂ *Serviço:* ${opt.dataset.nome}\n📅 *Data:* ${fmtDt(data)}\n⏰ *Hora:* ${hora}\n💈 *Barbeiro:* ${bNome}\n\nObrigado pela preferência! Nos vemos lá.`;
     const msgBarbeiro = `*NOVA RESERVA - BLADE CUT*\n\n👤 *Cliente:* ${sessao.nome}\n✂ *Serviço:* ${opt.dataset.nome}\n📅 *Data:* ${fmtDt(data)}\n⏰ *Hora:* ${hora}\n📱 *WhatsApp:* ${sessao.tel || 'Não informado'}`;
     
-    // Notifica cliente (delay pequeno para o toast aparecer)
+    // Enviar WhatsApps automaticamente
     setTimeout(() => {
-      if (confirm('Deseja enviar a confirmação para o seu WhatsApp?')) {
-        enviarWhatsApp(sessao.tel, msgCliente);
-      }
-      // Notifica barbeiro
+      // Abre o WhatsApp do cliente
+      if (sessao.tel) enviarWhatsApp(sessao.tel, msgCliente);
+      
+      // Abre o WhatsApp do barbeiro logo em seguida
       if (barb && barb.tel) {
         setTimeout(() => {
-          if (confirm(`Deseja notificar o barbeiro ${bNome} via WhatsApp?`)) {
-            enviarWhatsApp(barb.tel, msgBarbeiro);
-          }
+          enviarWhatsApp(barb.tel, msgBarbeiro);
         }, 1000);
       }
-    }, 1500);
+    }, 1000);
 
     setDates();
     await populateHorasDisponiveis();
