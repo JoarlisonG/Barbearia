@@ -696,18 +696,18 @@ async function fsGet(col, id) {
 
 // Adiciona doc (sem id) — retorna id gerado
 async function fsAdd(col, data) {
-  const ref = await db.collection(col).add({ ...data, _createdAt: Date.now() });
+  const ref = await db.collection(col).add({ ...data, _appKey: 'rZgrtYLTf4r3D8cUfCBTSmEGtmz9685y', _createdAt: Date.now() });
   return ref.id;
 }
 
 // Atualiza doc por id (merge parcial)
 async function fsUpdate(col, id, changes) {
-  await db.collection(col).doc(id).update(changes);
+  await db.collection(col).doc(id).update({ ...changes, _appKey: 'rZgrtYLTf4r3D8cUfCBTSmEGtmz9685y' });
 }
 
 // Upsert por id fixo (usado para criação controlada)
 async function fsSet(col, id, data) {
-  await db.collection(col).doc(id).set(data, { merge: true });
+  await db.collection(col).doc(id).set({ ...data, _appKey: 'rZgrtYLTf4r3D8cUfCBTSmEGtmz9685y' }, { merge: true });
 }
 
 // Deleta doc por id
@@ -904,7 +904,7 @@ async function cadastrarCliente() {
     const existe = await fsWhereFirst('clientes', 'email', email);
     if (existe) { toast('Este e-mail já está cadastrado!', 'error'); return; }
 
-    const id = await fsAdd('clientes', { email, nome, senha_hash: hashSimples(senha), _appKey: 'rZgrtYLTf4r3D8cUfCBTSmEGtmz9685y' });
+    const id = await fsAdd('clientes', { email, nome, senha_hash: hashSimples(senha) });
     salvarSessao({ tipo: 'cliente', id, nome, email });
     toast(`Conta criada! Bem-vindo, ${nome}!`, 'success');
     ['cad-nome', 'cad-email', 'cad-senha', 'cad-senha2'].forEach(k => document.getElementById(k).value = '');
@@ -1553,7 +1553,7 @@ async function marcarLidos() {
     .where('visualizado', '==', 0)
     .get();
   const batch = db.batch();
-  snap.docs.forEach(d => batch.update(d.ref, { visualizado: 1 }));
+  snap.docs.forEach(d => batch.update(d.ref, { visualizado: 1, _appKey: 'rZgrtYLTf4r3D8cUfCBTSmEGtmz9685y' }));
   if (!snap.empty) await batch.commit();
 }
 
