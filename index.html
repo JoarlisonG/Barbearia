@@ -375,6 +375,7 @@ option:disabled{color:#3a3a50 !important}
       <div class="auth-form">
         <div class="field"><label>NOME COMPLETO</label><input type="text" id="cad-nome" placeholder="Seu nome" autocomplete="name"></div>
         <div class="field"><label>E-MAIL</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
+        <div class="field"><label>WHATSAPP (COM DDD)</label><input type="tel" id="cad-tel" placeholder="11999999999" inputmode="tel"></div>
         <div class="field"><label>SENHA</label><div class="pwd-wrap"><input type="password" id="cad-senha" placeholder="Mín. 6 caracteres" autocomplete="new-password"><button type="button" class="eye-btn" onclick="togglePwd('cad-senha')" tabindex="-1"><svg id="eye-icon-cad-senha" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <div class="field"><label>CONFIRMAR SENHA</label><div class="pwd-wrap"><input type="password" id="cad-senha2" placeholder="Repita a senha" autocomplete="new-password"><button type="button" class="eye-btn" onclick="togglePwd('cad-senha2')" tabindex="-1"><svg id="eye-icon-cad-senha2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <button class="btn-primary" id="btn-cad" onclick="cadastrarCliente()">CRIAR CONTA</button>
@@ -590,6 +591,7 @@ option:disabled{color:#3a3a50 !important}
         <div class="settings-card">
           <div class="settings-title">CADASTRAR NOVO BARBEIRO</div>
           <div class="field"><label>NOME DO BARBEIRO</label><input type="text" id="nb-nome" placeholder="Nome completo"></div>
+          <div class="field"><label>WHATSAPP (COM DDD)</label><input type="tel" id="nb-tel" placeholder="11999999999" inputmode="tel"></div>
           <div class="field"><label>USUÁRIO (LOGIN)</label><input type="text" id="nb-usuario" placeholder="Ex: joao, pedro..." autocomplete="off"></div>
           <div class="field"><label>SENHA INICIAL</label><div class="pwd-wrap"><input type="password" id="nb-senha" placeholder="Mín. 4 caracteres"><button type="button" class="eye-btn" onclick="togglePwd('nb-senha')" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
           <button class="btn-primary" onclick="cadastrarBarbeiro()">＋ ADICIONAR BARBEIRO</button>
@@ -846,13 +848,70 @@ function beepError() {
     const ctx = new(window.AudioContext || window.webkitAudioContext)();
     const g = ctx.createGain(), o = ctx.createOscillator();
     o.connect(g); g.connect(ctx.destination); o.type = 'sawtooth';
-    o.frequency.setValueAtTime(200, ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
+    o.frequency.setValueAtTime(150, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.3);
     g.gain.setValueAtTime(0.08, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
-    o.start(); o.stop(ctx.currentTime + 0.22);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    o.start(); o.stop(ctx.currentTime + 0.3);
     setTimeout(() => ctx.close(), 400);
   } catch(e) {}
+}
+
+// NOTIFICAÇÕES NATIVAS
+function solicitarPermissaoNotificacao() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+    Notification.requestPermission();
+  }
+}
+
+function dispararNotificacao(titulo, corpo) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  
+  // Tenta vibrar o celular (apenas se suportado)
+  if ("vibrate" in navigator) navigator.vibrate([200, 100, 200]);
+  
+  // Som de alerta
+  beep(1000, 1500, 0.5, 0.1);
+
+  const options = {
+    body: corpo,
+    icon: 'https://cdn-icons-png.flaticon.com/512/2821/2821012.png', // Ícone genérico de barbearia
+    badge: 'https://cdn-icons-png.flaticon.com/512/2821/2821012.png',
+    vibrate: [200, 100, 200]
+  };
+  
+  new Notification(titulo, options);
+}
+
+// Listener em tempo real para o barbeiro
+let unsubscribeAgendamentos = null;
+function iniciarMonitoramentoAgendamentos(barbeiroId) {
+  if (unsubscribeAgendamentos) unsubscribeAgendamentos();
+  
+  // Escuta apenas agendamentos novos (visualizado == 0) para o barbeiro logado
+  unsubscribeAgendamentos = db.collection('agendamentos')
+    .where('barbeiro_id', '==', barbeiroId)
+    .where('visualizado', '==', 0)
+    .onSnapshot(snapshot => {
+      snapshot.docChanges().forEach(change => {
+        if (change.type === "added") {
+          const ag = change.doc.data();
+          // Evita notificar agendamentos antigos carregados no primeiro snapshot
+          const criadoAgora = ag._createdAt > (Date.now() - 10000); 
+          if (criadoAgora) {
+            dispararNotificacao(
+              "✂️ NOVO AGENDAMENTO!",
+              `${ag.nome_cliente} agendou ${ag.servico} para às ${ag.hora} do dia ${fmtDt(ag.data)}`
+            );
+            // Atualiza a lista se estiver na aba de agendamentos
+            if (document.getElementById('admin-agendamentos').style.display !== 'none') {
+              renderAdmin();
+            }
+          }
+        }
+      });
+    });
 }
 
 // ═══════════════════════════════════════════════
@@ -891,11 +950,13 @@ function togglePwd(inputId) {
 async function cadastrarCliente() {
   const nome   = document.getElementById('cad-nome').value.trim();
   const email  = document.getElementById('cad-email').value.trim().toLowerCase();
+  const tel    = document.getElementById('cad-tel').value.trim().replace(/\D/g,'');
   const senha  = document.getElementById('cad-senha').value;
   const senha2 = document.getElementById('cad-senha2').value;
 
   if (!nome)                         { toast('Informe seu nome!', 'error'); return; }
   if (!email || !email.includes('@')) { toast('E-mail inválido!', 'error'); return; }
+  if (tel.length < 10)               { toast('Informe um WhatsApp válido!', 'error'); return; }
   if (senha.length < 6)              { toast('Senha deve ter mín. 6 caracteres!', 'error'); return; }
   if (senha !== senha2)              { toast('As senhas não coincidem!', 'error'); return; }
 
@@ -904,10 +965,10 @@ async function cadastrarCliente() {
     const existe = await fsWhereFirst('clientes', 'email', email);
     if (existe) { toast('Este e-mail já está cadastrado!', 'error'); return; }
 
-    const id = await fsAdd('clientes', { email, nome, senha_hash: hashSimples(senha) });
-    salvarSessao({ tipo: 'cliente', id, nome, email });
+    const id = await fsAdd('clientes', { email, tel, nome, senha_hash: hashSimples(senha) });
+    salvarSessao({ tipo: 'cliente', id, nome, email, tel });
     toast(`Conta criada! Bem-vindo, ${nome}!`, 'success');
-    ['cad-nome', 'cad-email', 'cad-senha', 'cad-senha2'].forEach(k => document.getElementById(k).value = '');
+    ['cad-nome', 'cad-email', 'cad-tel', 'cad-senha', 'cad-senha2'].forEach(k => document.getElementById(k).value = '');
     await abrirPainelCliente();
   } catch(err) {
     console.error(err);
@@ -1082,10 +1143,16 @@ async function abrirPainelAdmin() {
   document.getElementById('admin-barber-name').textContent = sessao.barbeiro_nome || '—';
   document.getElementById('nav-admin').classList.add('visible');
   ir('screen-admin');
+  
+  // Ativa notificações e monitoramento (se não estiver em modo privado/incognito)
+  solicitarPermissaoNotificacao();
+  iniciarMonitoramentoAgendamentos(sessao.barbeiro_id);
+
   await adminTab('agendamentos');
 }
 
 function sairAdmin() {
+  if (unsubscribeAgendamentos) unsubscribeAgendamentos();
   limparSessao();
   document.getElementById('nav-admin').classList.remove('visible');
   ir('screen-escolha');
@@ -1114,21 +1181,23 @@ async function trocarSenhaAdmin() {
 
 async function cadastrarBarbeiro() {
   const nome    = document.getElementById('nb-nome').value.trim();
+  const tel     = document.getElementById('nb-tel').value.trim().replace(/\D/g,'');
   const usuario = document.getElementById('nb-usuario').value.trim().toLowerCase();
   const senha   = document.getElementById('nb-senha').value;
   if (!nome)          { toast('Informe o nome do barbeiro!', 'error'); return; }
+  if (tel.length < 10) { toast('Informe um WhatsApp válido!', 'error'); return; }
   if (!usuario)       { toast('Informe o usuário!', 'error'); return; }
   if (senha.length < 4) { toast('Senha deve ter mín. 4 caracteres!', 'error'); return; }
   try {
     const existe = await fsWhereFirst('barbeiros', 'usuario', usuario);
     if (existe) { toast('Usuário já cadastrado!', 'error'); return; }
     await fsAdd('barbeiros', {
-      usuario, nome, senha_hash: hashSimples(senha),
+      usuario, tel, nome, senha_hash: hashSimples(senha),
       dias_trabalho: [1, 2, 3, 4, 5, 6],
       hora_inicio: 8, hora_fim: 20, prazo_dias: 30
     });
     toast(`Barbeiro ${nome} cadastrado!`, 'success');
-    ['nb-nome', 'nb-usuario', 'nb-senha'].forEach(k => document.getElementById(k).value = '');
+    ['nb-nome', 'nb-tel', 'nb-usuario', 'nb-senha'].forEach(k => document.getElementById(k).value = '');
     await renderBarberList();
     await carregarSelectBarbeiros();
   } catch(err) {
@@ -1443,6 +1512,11 @@ async function renderMeusAgendamentos() {
 // ═══════════════════════════════════════════════
 // CONFIRMAR AGENDAMENTO
 // ═══════════════════════════════════════════════
+async function enviarWhatsApp(tel, msg) {
+  const url = `https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
 async function confirmarAgendamento() {
   if (!sessao || sessao.tipo !== 'cliente') { toast('Faça login primeiro!', 'error'); return; }
 
@@ -1509,6 +1583,26 @@ async function confirmarAgendamento() {
     });
 
     toast(`Reserva confirmada com ${bNome}! ${R(preco)}`, 'success');
+    
+    // Enviar WhatsApps
+    const msgCliente = `Olá ${sessao.nome}! Seu horário foi agendado com sucesso na BLADE CUT.\n\n✂ *Serviço:* ${opt.dataset.nome}\n📅 *Data:* ${fmtDt(data)}\n⏰ *Hora:* ${hora}\n💈 *Barbeiro:* ${bNome}\n\nObrigado pela preferência! Nos vemos lá.`;
+    const msgBarbeiro = `*NOVA RESERVA - BLADE CUT*\n\n👤 *Cliente:* ${sessao.nome}\n✂ *Serviço:* ${opt.dataset.nome}\n📅 *Data:* ${fmtDt(data)}\n⏰ *Hora:* ${hora}\n📱 *WhatsApp:* ${sessao.tel || 'Não informado'}`;
+    
+    // Notifica cliente (delay pequeno para o toast aparecer)
+    setTimeout(() => {
+      if (confirm('Deseja enviar a confirmação para o seu WhatsApp?')) {
+        enviarWhatsApp(sessao.tel, msgCliente);
+      }
+      // Notifica barbeiro
+      if (barb && barb.tel) {
+        setTimeout(() => {
+          if (confirm(`Deseja notificar o barbeiro ${bNome} via WhatsApp?`)) {
+            enviarWhatsApp(barb.tel, msgBarbeiro);
+          }
+        }, 1000);
+      }
+    }, 1500);
+
     setDates();
     await populateHorasDisponiveis();
     await renderMeusAgendamentos();
