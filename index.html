@@ -7,6 +7,11 @@
 <title>BLADE CUT — Barbearia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+<!-- Firebase v10 modular via CDN (compat layer para uso sem bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -65,7 +70,7 @@ body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradi
 .auth-form{width:100%;display:flex;flex-direction:column;gap:14px}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-size:12px;font-weight:600;letter-spacing:1.5px;color:var(--text-dim);font-family:var(--font-mono)}
-.field input,.field select{background:var(--input);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px 14px;color:var(--text);font-family:var(--font-ui);font-size:15px;font-weight:500;width:100%;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
+.field input,.field select{background:var(--input);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:14px;color:var(--text);font-family:var(--font-ui);font-size:15px;font-weight:500;width:100%;outline:none;transition:border-color .2s,box-shadow .2s;-webkit-appearance:none;appearance:none}
 .field input:focus,.field select:focus{border-color:var(--border-strong);box-shadow:var(--neon-glow-sm)}
 .field input::placeholder{color:var(--text-dim);opacity:.6}
 .field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FF6B00' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
@@ -78,6 +83,7 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 .btn-primary::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0.15);opacity:0;transition:opacity .15s}
 .btn-primary:active::after{opacity:1}
 .btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .btn-primary.verde{background:linear-gradient(135deg,#00b36b,#00e5a0);box-shadow:0 0 18px rgba(0,229,160,0.25);color:#051a10}
 .btn-secondary{width:100%;padding:13px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text-dim);font-family:var(--font-ui);font-size:15px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all .2s}
 .btn-secondary:active{background:var(--neon-dim);color:var(--neon)}
@@ -212,7 +218,6 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 .btn-del{background:none;border:none;color:var(--text-dim);cursor:pointer;padding:4px 6px;font-size:18px;line-height:1;border-radius:4px;transition:color .15s}
 .btn-del:active{color:var(--danger)}
 
-
 /* ── SERVIÇOS CARD ── */
 .service-list{display:flex;flex-direction:column;gap:8px;margin-top:4px}
 .service-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--input);border-radius:8px;border:1px solid var(--border)}
@@ -256,7 +261,6 @@ input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-ou
 .user-chip-name{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:1px}
 .user-chip-name span{color:var(--text)}
 
-/* ── OPTION DISABLED STYLE ── */
 option:disabled{color:#3a3a50 !important}
 
 /* ── DIAS TRABALHO GRID ── */
@@ -265,8 +269,7 @@ option:disabled{color:#3a3a50 !important}
 .dia-btn.ativo{background:rgba(255,107,0,0.18);border-color:var(--border-strong);color:var(--neon);box-shadow:var(--neon-glow-sm)}
 
 /* ── FILA ESPERA ── */
-.fila-card{background:var(--card);border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px}
-.fila-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,var(--info),transparent)}
+.fila-card{background:var(--card);border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
 .fila-header{display:flex;align-items:center;justify-content:space-between}
 .fila-title{font-weight:700;font-size:14px}
 .fila-pos{font-family:var(--font-mono);font-size:10px;color:var(--info);background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);padding:3px 8px;border-radius:5px}
@@ -277,21 +280,6 @@ option:disabled{color:#3a3a50 !important}
 .star-row{display:flex;gap:6px;justify-content:center;margin:8px 0}
 .star{font-size:28px;cursor:pointer;color:var(--text-dim);transition:color .15s;-webkit-tap-highlight-color:transparent}
 .star.on{color:#FFD700;text-shadow:0 0 8px rgba(255,215,0,0.5)}
-.avaliacao-card{background:var(--card);border:1px solid rgba(255,215,0,0.2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;position:relative}
-.avaliacao-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,#FFD700,transparent);border-radius:10px 10px 0 0}
-.av-header{display:flex;justify-content:space-between;align-items:flex-start}
-.av-stars{color:#FFD700;font-size:13px;letter-spacing:1px}
-.av-data{font-family:var(--font-mono);font-size:9px;color:var(--text-dim)}
-.av-svc{font-weight:700;font-size:14px}
-.av-cliente{font-family:var(--font-mono);font-size:10px;color:var(--text-dim)}
-.av-comentario{font-size:13px;color:var(--text-dim);font-style:italic;border-left:2px solid rgba(255,215,0,0.3);padding-left:8px;margin-top:2px}
-
-/* ── HISTÓRICO ATENDIMENTOS ── */
-.hist-entry{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
-.hist-info{flex:1}
-.hist-svc{font-weight:700;font-size:14px}
-.hist-meta{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-top:2px}
-.hist-preco{font-family:var(--font-mono);font-size:14px;color:var(--success)}
 
 /* ── MODAL ── */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:5000;display:flex;align-items:flex-end;justify-content:center}
@@ -309,6 +297,10 @@ option:disabled{color:#3a3a50 !important}
 .eye-btn:active{color:var(--neon)}
 .eye-btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
+/* ── FIREBASE STATUS BADGE ── */
+.fb-status{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.2);color:var(--success);margin-top:6px}
+.fb-status.offline{background:rgba(255,61,90,0.08);border-color:rgba(255,61,90,0.2);color:var(--danger)}
+.fb-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
 
 *::-webkit-scrollbar{display:none}
 *{scrollbar-width:none;-ms-overflow-style:none}
@@ -316,10 +308,7 @@ option:disabled{color:#3a3a50 !important}
 </head>
 <body>
 
-
-
-
-<div id="loading"><div class="loader-ring"></div><div class="loader-txt">INICIANDO...</div></div>
+<div id="loading"><div class="loader-ring"></div><div class="loader-txt">CONECTANDO...</div></div>
 <div id="toast-container"></div>
 
 <div id="app">
@@ -333,7 +322,8 @@ option:disabled{color:#3a3a50 !important}
           <svg viewBox="0 0 24 24"><path d="M9.5 3a1.5 1.5 0 0 0-1.5 1.5v.75H6.5A2.5 2.5 0 0 0 4 7.75v10.5A2.5 2.5 0 0 0 6.5 20.75h11A2.5 2.5 0 0 0 20 18.25V7.75a2.5 2.5 0 0 0-2.5-2.5H16V4.5A1.5 1.5 0 0 0 14.5 3h-5zm0 1.5h5V6H9.5V4.5zM6 9h12v9.25A1 1 0 0 1 17 19.25H7a1 1 0 0 1-1-1V9zm2 2v1.5h2V11H8zm4 0v1.5h2V11h-2zm4 0v1.5h2V11h-2zm-8 3v1.5h2V14H8zm4 0v1.5h2V14h-2zm4 0v1.5h2V14h-2z"/></svg>
         </div>
         <div class="logo-name">BLADE CUT</div>
-        <div class="logo-tag">// BARBEARIA PREMIUM — v4.0</div>
+        <div class="logo-tag">// BARBEARIA PREMIUM — v5.0 FIREBASE</div>
+        <div class="fb-status" id="fb-badge"><span class="fb-dot"></span>FIREBASE</div>
       </div>
       <div class="divider"></div>
       <div class="auth-title">// COMO DESEJA ACESSAR?</div>
@@ -364,7 +354,7 @@ option:disabled{color:#3a3a50 !important}
       <div class="auth-form">
         <div class="field"><label>E-MAIL</label><input type="email" id="cl-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
         <div class="field"><label>SENHA</label><div class="pwd-wrap"><input type="password" id="cl-senha" placeholder="••••••••" autocomplete="current-password"><button type="button" class="eye-btn" onclick="togglePwd('cl-senha')" tabindex="-1"><svg id="eye-icon-cl-senha" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button class="btn-primary" onclick="loginCliente()">ENTRAR</button>
+        <button class="btn-primary" id="btn-cl-login" onclick="loginCliente()">ENTRAR</button>
         <div class="auth-switch">Não tem conta? <a onclick="ir('screen-cliente-cadastro')">Criar conta grátis</a></div>
         <button class="btn-secondary" onclick="ir('screen-escolha')" style="margin-top:4px">← Voltar</button>
       </div>
@@ -387,7 +377,7 @@ option:disabled{color:#3a3a50 !important}
         <div class="field"><label>E-MAIL</label><input type="email" id="cad-email" placeholder="seu@email.com" autocomplete="email" inputmode="email"></div>
         <div class="field"><label>SENHA</label><div class="pwd-wrap"><input type="password" id="cad-senha" placeholder="Mín. 6 caracteres" autocomplete="new-password"><button type="button" class="eye-btn" onclick="togglePwd('cad-senha')" tabindex="-1"><svg id="eye-icon-cad-senha" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
         <div class="field"><label>CONFIRMAR SENHA</label><div class="pwd-wrap"><input type="password" id="cad-senha2" placeholder="Repita a senha" autocomplete="new-password"><button type="button" class="eye-btn" onclick="togglePwd('cad-senha2')" tabindex="-1"><svg id="eye-icon-cad-senha2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button class="btn-primary" onclick="cadastrarCliente()">CRIAR CONTA</button>
+        <button class="btn-primary" id="btn-cad" onclick="cadastrarCliente()">CRIAR CONTA</button>
         <div class="auth-switch">Já tem conta? <a onclick="ir('screen-cliente-login')">Fazer login</a></div>
         <button class="btn-secondary" onclick="ir('screen-escolha')" style="margin-top:4px">← Voltar</button>
       </div>
@@ -413,7 +403,7 @@ option:disabled{color:#3a3a50 !important}
           </select>
         </div>
         <div class="field"><label>SENHA</label><div class="pwd-wrap"><input type="password" id="adm-senha" placeholder="••••••••" autocomplete="current-password"><button type="button" class="eye-btn" onclick="togglePwd('adm-senha')" tabindex="-1"><svg id="eye-icon-adm-senha" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-        <button class="btn-primary" onclick="loginAdmin()">ACESSAR PAINEL</button>
+        <button class="btn-primary" id="btn-adm-login" onclick="loginAdmin()">ACESSAR PAINEL</button>
         <button class="btn-secondary" onclick="ir('screen-escolha')" style="margin-top:4px">← Voltar</button>
       </div>
     </div>
@@ -457,7 +447,7 @@ option:disabled{color:#3a3a50 !important}
               <span class="preview-label">VALOR DO SERVIÇO</span>
               <span class="preview-val" id="preview-val">R$ 0,00</span>
             </div>
-            <button class="btn-primary" onclick="confirmarAgendamento()">⚡ CONFIRMAR RESERVA</button>
+            <button class="btn-primary" id="btn-confirmar-ag" onclick="confirmarAgendamento()">⚡ CONFIRMAR RESERVA</button>
           </div>
         </div>
         <div>
@@ -492,7 +482,7 @@ option:disabled{color:#3a3a50 !important}
           </div>
         </div>
       </div>
-      <!-- Sub-painéis admin -->
+
       <div id="admin-agendamentos" class="panel-scroll">
         <div>
           <div class="section-label">// INDICADORES</div>
@@ -552,12 +542,11 @@ option:disabled{color:#3a3a50 !important}
         <div class="section-label">// ALTERAR MINHA SENHA</div>
         <div class="settings-card">
           <div class="settings-title">SEGURANÇA</div>
-          <div class="field"><label>SENHA ATUAL</label><div class="pwd-wrap"><input type="password" id="cfg-atual" placeholder="Senha atual"><button type="button" class="eye-btn" onclick="togglePwd('cfg-atual')" tabindex="-1"><svg id="eye-icon-cfg-atual" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-          <div class="field"><label>NOVA SENHA</label><div class="pwd-wrap"><input type="password" id="cfg-nova" placeholder="Nova senha (mín. 4 caracteres)"><button type="button" class="eye-btn" onclick="togglePwd('cfg-nova')" tabindex="-1"><svg id="eye-icon-cfg-nova" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
-          <div class="field"><label>CONFIRMAR NOVA SENHA</label><div class="pwd-wrap"><input type="password" id="cfg-nova2" placeholder="Repita a nova senha"><button type="button" class="eye-btn" onclick="togglePwd('cfg-nova2')" tabindex="-1"><svg id="eye-icon-cfg-nova2" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+          <div class="field"><label>SENHA ATUAL</label><div class="pwd-wrap"><input type="password" id="cfg-atual" placeholder="Senha atual"><button type="button" class="eye-btn" onclick="togglePwd('cfg-atual')" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+          <div class="field"><label>NOVA SENHA</label><div class="pwd-wrap"><input type="password" id="cfg-nova" placeholder="Nova senha (mín. 4 caracteres)"><button type="button" class="eye-btn" onclick="togglePwd('cfg-nova')" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+          <div class="field"><label>CONFIRMAR NOVA SENHA</label><div class="pwd-wrap"><input type="password" id="cfg-nova2" placeholder="Repita a nova senha"><button type="button" class="eye-btn" onclick="togglePwd('cfg-nova2')" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
           <button class="btn-primary" onclick="trocarSenhaAdmin()">SALVAR NOVA SENHA</button>
         </div>
-
 
         <div class="section-label" style="margin-top:8px">// GERENCIAR SERVIÇOS</div>
         <div class="settings-card">
@@ -602,7 +591,7 @@ option:disabled{color:#3a3a50 !important}
           <div class="settings-title">CADASTRAR NOVO BARBEIRO</div>
           <div class="field"><label>NOME DO BARBEIRO</label><input type="text" id="nb-nome" placeholder="Nome completo"></div>
           <div class="field"><label>USUÁRIO (LOGIN)</label><input type="text" id="nb-usuario" placeholder="Ex: joao, pedro..." autocomplete="off"></div>
-          <div class="field"><label>SENHA INICIAL</label><div class="pwd-wrap"><input type="password" id="nb-senha" placeholder="Mín. 4 caracteres"><button type="button" class="eye-btn" onclick="togglePwd('nb-senha')" tabindex="-1"><svg id="eye-icon-nb-senha" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+          <div class="field"><label>SENHA INICIAL</label><div class="pwd-wrap"><input type="password" id="nb-senha" placeholder="Mín. 4 caracteres"><button type="button" class="eye-btn" onclick="togglePwd('nb-senha')" tabindex="-1"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
           <button class="btn-primary" onclick="cadastrarBarbeiro()">＋ ADICIONAR BARBEIRO</button>
           <div class="settings-divider"></div>
           <div class="settings-title">BARBEIROS CADASTRADOS</div>
@@ -639,8 +628,7 @@ option:disabled{color:#3a3a50 !important}
     </nav>
   </div>
 
-
-  <!-- ════ MODAL AVALIAÇÃO ════ -->
+  <!-- MODAL AVALIAÇÃO -->
   <div class="modal-overlay hidden" id="modal-avaliacao">
     <div class="modal-box" style="position:relative">
       <button class="modal-close" onclick="fecharModalAvaliacao()">✕</button>
@@ -659,399 +647,393 @@ option:disabled{color:#3a3a50 !important}
     </div>
   </div>
 
-  <!-- ════ MODAL FILA ESPERA ════ -->
+  <!-- MODAL FILA ESPERA -->
   <div class="modal-overlay hidden" id="modal-fila">
     <div class="modal-box" style="position:relative">
       <button class="modal-close" onclick="fecharModalFila()">✕</button>
       <div class="modal-title">📋 ENTRAR NA FILA</div>
       <div class="modal-sub" id="fila-modal-info">Slot indisponível. Quer entrar na fila de espera?</div>
-      <input type="hidden" id="fila-barbeiro-id">
-      <input type="hidden" id="fila-data">
-      <input type="hidden" id="fila-hora">
-      <input type="hidden" id="fila-svc-id">
       <button class="btn-primary" onclick="confirmarFila()" style="background:linear-gradient(135deg,var(--info),#1e90ff);box-shadow:0 0 18px rgba(56,189,248,0.3);color:#09090b">📋 CONFIRMAR FILA DE ESPERA</button>
       <button class="btn-secondary" onclick="fecharModalFila()">Cancelar</button>
     </div>
   </div>
 
 </div><!-- #app -->
-<script type="module">
 
+<script>
 // ═══════════════════════════════════════════════
-// FIREBASE — configuração
+// FIREBASE CONFIG + INIT
 // ═══════════════════════════════════════════════
-import { initializeApp }                              from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import { getFirestore, collection, doc, addDoc,
-         getDoc, getDocs, setDoc, updateDoc,
-         deleteDoc, query, where, orderBy,
-         serverTimestamp }                            from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-import { getAuth, createUserWithEmailAndPassword,
-         signInWithEmailAndPassword, signOut,
-         onAuthStateChanged }                        from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
 const firebaseConfig = {
-  apiKey:            "AIzaSyAvqvwGRuIGxO-BfzqGd9a7WjJQ09kDt7Y",
-  authDomain:        "barbearia-8df40.firebaseapp.com",
-  projectId:         "barbearia-8df40",
-  storageBucket:     "barbearia-8df40.firebasestorage.app",
+  apiKey: "AIzaSyAvqvwGRuIGxO-BfzqGd9a7WjJQ09kDt7Y",
+  authDomain: "barbearia-8df40.firebaseapp.com",
+  projectId: "barbearia-8df40",
+  storageBucket: "barbearia-8df40.firebasestorage.app",
   messagingSenderId: "574040206467",
-  appId:             "1:574040206467:web:f2c5ac62e7656a20fe3fb6"
+  appId: "1:574040206467:web:f2c5ac62e7656a20fe3fb6"
 };
 
-const fireApp  = initializeApp(firebaseConfig);
-const fs       = getFirestore(fireApp);
-const auth     = getAuth(fireApp);
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-// ── Helpers Firestore (mantém mesma API usada no app) ──────────────────────
-// db.colecao.add / get / update / delete / toArray / filter / where().equals()
-
-function col(name){ return collection(fs, name); }
-
-const db = {
-  _make(colName){
-    return {
-      async add(obj){
-        const {id:_, ...data} = obj;
-        const ref = await addDoc(col(colName), {...data, _ts: serverTimestamp()});
-        obj.id = ref.id;
-        return ref.id;
-      },
-      async bulkAdd(arr){
-        return Promise.all(arr.map(o => this.add(o)));
-      },
-      async get(id){
-        if(!id) return undefined;
-        const snap = await getDoc(doc(fs, colName, String(id)));
-        return snap.exists() ? {id: snap.id, ...snap.data()} : undefined;
-      },
-      async update(id, changes){
-        await updateDoc(doc(fs, colName, String(id)), changes);
-      },
-      async put(obj){
-        const {id, ...data} = obj;
-        await setDoc(doc(fs, colName, String(id)), data);
-        return id;
-      },
-      async delete(id){
-        await deleteDoc(doc(fs, colName, String(id)));
-      },
-      async count(){
-        const s = await getDocs(col(colName));
-        return s.size;
-      },
-      async toArray(){
-        const s = await getDocs(col(colName));
-        return s.docs.map(d=>({id:d.id,...d.data()}));
-      },
-      filter(fn){
-        return {
-          async toArray(){ const all = await db._make(colName).toArray(); return all.filter(fn); },
-          async first(){   const all = await db._make(colName).toArray(); return all.find(fn); }
-        };
-      },
-      where(field){
-        return {
-          equals(val){
-            return {
-              async toArray(){
-                const q = query(col(colName), where(field,'==',val));
-                const s = await getDocs(q);
-                return s.docs.map(d=>({id:d.id,...d.data()}));
-              },
-              async first(){
-                const q = query(col(colName), where(field,'==',val));
-                const s = await getDocs(q);
-                if(s.empty) return undefined;
-                const d = s.docs[0];
-                return {id:d.id,...d.data()};
-              },
-              async count(){
-                const q = query(col(colName), where(field,'==',val));
-                const s = await getDocs(q);
-                return s.size;
-              }
-            };
-          }
-        };
-      }
-    };
-  }
-};
-
-// Cria proxy para db.agendamentos, db.barbeiros etc
-['agendamentos','tabela_precos','caixa','clientes','barbeiros',
- 'config','fila_espera','historico','avaliacoes'].forEach(n => {
-  db[n] = db._make(n);
+// Habilita cache offline
+db.enablePersistence({ synchronizeTabs: true }).catch(err => {
+  console.warn('Persistência offline não disponível:', err.code);
 });
 
-// ── Firebase Auth helpers ──────────────────────────────────────────────────
-async function fbCriarCliente(email, senha){
-  const cred = await createUserWithEmailAndPassword(auth, email, senha);
-  return cred.user.uid;
-}
-async function fbLoginCliente(email, senha){
-  const cred = await signInWithEmailAndPassword(auth, email, senha);
-  return cred.user.uid;
-}
-async function fbLogout(){
-  await signOut(auth);
+// ─── Helpers Firestore ────────────────────────
+// Retorna todos os docs de uma collection como array [{id, ...data}]
+async function fsGetAll(col) {
+  const snap = await db.collection(col).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+// Busca um doc pelo id
+async function fsGet(col, id) {
+  const doc = await db.collection(col).doc(id).get();
+  return doc.exists ? { id: doc.id, ...doc.data() } : null;
+}
+
+// Adiciona doc (sem id) — retorna id gerado
+async function fsAdd(col, data) {
+  const ref = await db.collection(col).add({ ...data, _createdAt: Date.now() });
+  return ref.id;
+}
+
+// Atualiza doc por id (merge parcial)
+async function fsUpdate(col, id, changes) {
+  await db.collection(col).doc(id).update(changes);
+}
+
+// Upsert por id fixo (usado para criação controlada)
+async function fsSet(col, id, data) {
+  await db.collection(col).doc(id).set(data, { merge: true });
+}
+
+// Deleta doc por id
+async function fsDel(col, id) {
+  await db.collection(col).doc(id).delete();
+}
+
+// Busca com filtro where(field == val)
+async function fsWhere(col, field, val) {
+  const snap = await db.collection(col).where(field, '==', val).get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+// Busca primeiro resultado de where
+async function fsWhereFirst(col, field, val) {
+  const snap = await db.collection(col).where(field, '==', val).limit(1).get();
+  if (snap.empty) return null;
+  const d = snap.docs[0];
+  return { id: d.id, ...d.data() };
+}
+
+// Conta registros where
+async function fsWhereCount(col, field, val) {
+  const snap = await db.collection(col).where(field, '==', val).get();
+  return snap.size;
+}
+
+// ═══════════════════════════════════════════════
+// DADOS PADRÃO
+// ═══════════════════════════════════════════════
 const PRECOS_PADRAO = [
-  {nome:'Corte Degradê',preco:45,duracao_min:30},
-  {nome:'Barba Terapia',preco:35,duracao_min:30},
-  {nome:'Combo Completo',preco:70,duracao_min:60},
-  {nome:'Sobrancelha',preco:15,duracao_min:20},
-  {nome:'Platinado',preco:120,duracao_min:90}
+  { nome: 'Corte Degradê',  preco: 45,  duracao_min: 30 },
+  { nome: 'Barba Terapia',  preco: 35,  duracao_min: 30 },
+  { nome: 'Combo Completo', preco: 70,  duracao_min: 60 },
+  { nome: 'Sobrancelha',    preco: 15,  duracao_min: 20 },
+  { nome: 'Platinado',      preco: 120, duracao_min: 90 }
 ];
 
-async function initDB(){
-  if(await db.tabela_precos.count()===0) await db.tabela_precos.bulkAdd(PRECOS_PADRAO);
-  const master = await db.barbeiros.where('usuario').equals('admin').first();
-  if(!master){
-    await db.barbeiros.add({usuario:'admin', nome:'Admin Master', senha_hash:hashSimples('admin')});
+async function initFirestore() {
+  // Cria serviços padrão apenas se não existirem
+  const svcs = await fsGetAll('tabela_precos');
+  if (svcs.length === 0) {
+    for (const s of PRECOS_PADRAO) await fsAdd('tabela_precos', s);
+  }
+  // Cria admin master se não existir
+  const master = await fsWhereFirst('barbeiros', 'usuario', 'admin');
+  if (!master) {
+    await fsAdd('barbeiros', {
+      usuario: 'admin',
+      nome: 'Admin Master',
+      senha_hash: hashSimples('admin'),
+      dias_trabalho: [1, 2, 3, 4, 5, 6],
+      hora_inicio: 8,
+      hora_fim: 20,
+      prazo_dias: 30
+    });
   }
 }
 
 // ═══════════════════════════════════════════════
-// AUTH — HASH SIMPLES
+// HASH SIMPLES (sem dependências externas)
 // ═══════════════════════════════════════════════
 function hashSimples(str) {
   let h = 5381;
-  for(let i=0;i<str.length;i++) h = ((h<<5)+h)+str.charCodeAt(i);
-  return (h>>>0).toString(36);
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+  return (h >>> 0).toString(36);
 }
 
-// Sessão em memória + localStorage
+// ═══════════════════════════════════════════════
+// SESSÃO (localStorage)
+// ═══════════════════════════════════════════════
 let sessao = null;
-// {tipo:'cliente'|'admin', id?, nome?, email?, barbeiro_id?, barbeiro_nome?}
 
 function salvarSessao(s) {
   sessao = s;
-  localStorage.setItem('bc_sessao_bc1', JSON.stringify(s));
+  localStorage.setItem('bc_sessao_v5', JSON.stringify(s));
 }
 function carregarSessao() {
-  const raw = localStorage.getItem('bc_sessao_bc1');
-  if(raw){ try{ sessao = JSON.parse(raw); }catch(e){} }
+  try { sessao = JSON.parse(localStorage.getItem('bc_sessao_v5') || 'null'); } catch(e) { sessao = null; }
 }
 function limparSessao() {
   sessao = null;
-  localStorage.removeItem('bc_sessao_bc1');
+  localStorage.removeItem('bc_sessao_v5');
 }
 
 // ═══════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════
-const hoje = () => new Date().toISOString().split('T')[0];
-const horaAgora = () => new Date().toTimeString().slice(0,5);
-const R = v => `R$ ${(+v||0).toFixed(2).replace('.',',')}`;
-const Rc = v => { const n=+v||0; return n>=1000?`R$${(n/1000).toFixed(1)}k`:`R$${n.toFixed(0)}`; };
-const fmtDt = iso => { const[y,m,d]=iso.split('-'); return `${d}/${m}/${y}`; };
-const nomeDia = iso => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][new Date(iso+'T12:00:00').getDay()];
-function diasAtras(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().split('T')[0]; }
+const hoje    = () => new Date().toISOString().split('T')[0];
+const horaAgora = () => new Date().toTimeString().slice(0, 5);
+const R       = v => `R$ ${(+v || 0).toFixed(2).replace('.', ',')}`;
+const Rc      = v => { const n = +v || 0; return n >= 1000 ? `R$${(n/1000).toFixed(1)}k` : `R$${n.toFixed(0)}`; };
+const fmtDt   = iso => { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; };
+const nomeDia = iso => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][new Date(iso + 'T12:00:00').getDay()];
+function diasAtras(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().split('T')[0]; }
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled = loading;
+  if (loading) btn.dataset._orig = btn.textContent;
+  else btn.textContent = btn.dataset._orig || btn.textContent;
+}
 
 // ═══════════════════════════════════════════════
 // AUDIO
 // ═══════════════════════════════════════════════
-function beep(f1=880,f2=1320,dur=0.35,vol=0.07){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const g=ctx.createGain(); g.connect(ctx.destination);
-    g.gain.setValueAtTime(vol,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
-    [['square',f1],['sine',f2]].forEach(([t,f])=>{
-      const o=ctx.createOscillator(); o.type=t; o.frequency.value=f;
-      o.connect(g); o.start(); o.stop(ctx.currentTime+dur);
+function beep(f1=880, f2=1320, dur=0.35, vol=0.07) {
+  try {
+    const ctx = new(window.AudioContext || window.webkitAudioContext)();
+    const g = ctx.createGain(); g.connect(ctx.destination);
+    g.gain.setValueAtTime(vol, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+    [['square', f1], ['sine', f2]].forEach(([t, f]) => {
+      const o = ctx.createOscillator(); o.type = t; o.frequency.value = f;
+      o.connect(g); o.start(); o.stop(ctx.currentTime + dur);
     });
-    setTimeout(()=>ctx.close(),dur*1000+200);
-  }catch(e){}
+    setTimeout(() => ctx.close(), dur * 1000 + 200);
+  } catch(e) {}
 }
-function beepCash(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const g=ctx.createGain(),o=ctx.createOscillator();
-    o.connect(g); g.connect(ctx.destination); o.type='sine';
-    o.frequency.setValueAtTime(500,ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(800,ctx.currentTime+0.08);
-    g.gain.setValueAtTime(0.1,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.28);
-    o.start(); o.stop(ctx.currentTime+0.28);
-    setTimeout(()=>ctx.close(),400);
-  }catch(e){}
+function beepCash() {
+  try {
+    const ctx = new(window.AudioContext || window.webkitAudioContext)();
+    const g = ctx.createGain(), o = ctx.createOscillator();
+    o.connect(g); g.connect(ctx.destination); o.type = 'sine';
+    o.frequency.setValueAtTime(500, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.08);
+    g.gain.setValueAtTime(0.1, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.28);
+    o.start(); o.stop(ctx.currentTime + 0.28);
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {}
 }
-function beepError(){
-  try{
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    const g=ctx.createGain(),o=ctx.createOscillator();
-    o.connect(g); g.connect(ctx.destination); o.type='sawtooth';
-    o.frequency.setValueAtTime(200,ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.2);
-    g.gain.setValueAtTime(0.08,ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.22);
-    o.start(); o.stop(ctx.currentTime+0.22);
-    setTimeout(()=>ctx.close(),400);
-  }catch(e){}
+function beepError() {
+  try {
+    const ctx = new(window.AudioContext || window.webkitAudioContext)();
+    const g = ctx.createGain(), o = ctx.createOscillator();
+    o.connect(g); g.connect(ctx.destination); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(200, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.2);
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+    o.start(); o.stop(ctx.currentTime + 0.22);
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {}
 }
 
 // ═══════════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════════
-function toast(msg,type='default'){
-  const c=document.getElementById('toast-container');
-  const t=document.createElement('div');
-  t.className='toast'+(type!=='default'?' '+type:'');
-  t.innerHTML=`<span>${{success:'✓',error:'✕',default:'◈'}[type]||'◈'}</span><span>${msg}</span>`;
+function toast(msg, type = 'default') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast' + (type !== 'default' ? ' ' + type : '');
+  t.innerHTML = `<span>${{ success: '✓', error: '✕', default: '◈' }[type] || '◈'}</span><span>${msg}</span>`;
   c.appendChild(t);
-  setTimeout(()=>{t.classList.add('hide');setTimeout(()=>t.remove(),350);},3000);
+  setTimeout(() => { t.classList.add('hide'); setTimeout(() => t.remove(), 350); }, 3000);
 }
 
 // ═══════════════════════════════════════════════
 // NAVEGAÇÃO
 // ═══════════════════════════════════════════════
-function ir(screenId){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+function ir(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(screenId).classList.add('active');
 }
-function scrollCliente(){
-  document.getElementById('scroll-cliente').scrollTo({top:0,behavior:'smooth'});
+function scrollCliente() {
+  document.getElementById('scroll-cliente').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Password toggle
+function togglePwd(inputId) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
 // ═══════════════════════════════════════════════
 // AUTH — CLIENTE
 // ═══════════════════════════════════════════════
-async function cadastrarCliente(){
+async function cadastrarCliente() {
   const nome   = document.getElementById('cad-nome').value.trim();
   const email  = document.getElementById('cad-email').value.trim().toLowerCase();
   const senha  = document.getElementById('cad-senha').value;
   const senha2 = document.getElementById('cad-senha2').value;
-  if(!nome)                        { toast('Informe seu nome!','error'); return; }
-  if(!email||!email.includes('@')) { toast('E-mail inválido!','error'); return; }
-  if(senha.length<6)               { toast('Senha deve ter mín. 6 caracteres!','error'); return; }
-  if(senha!==senha2)               { toast('As senhas não coincidem!','error'); return; }
+
+  if (!nome)                         { toast('Informe seu nome!', 'error'); return; }
+  if (!email || !email.includes('@')) { toast('E-mail inválido!', 'error'); return; }
+  if (senha.length < 6)              { toast('Senha deve ter mín. 6 caracteres!', 'error'); return; }
+  if (senha !== senha2)              { toast('As senhas não coincidem!', 'error'); return; }
+
+  setLoading('btn-cad', true);
   try {
-    const uid = await fbCriarCliente(email, senha);
-    await db.clientes.put({id: uid, email, nome});
-    salvarSessao({tipo:'cliente', id: uid, nome, email});
-    toast(`Conta criada! Bem-vindo, ${nome}!`,'success');
-    ['cad-nome','cad-email','cad-senha','cad-senha2'].forEach(k=>document.getElementById(k).value='');
+    const existe = await fsWhereFirst('clientes', 'email', email);
+    if (existe) { toast('Este e-mail já está cadastrado!', 'error'); return; }
+
+    const id = await fsAdd('clientes', { email, nome, senha_hash: hashSimples(senha), _appKey: 'rZgrtYLTf4r3D8cUfCBTSmEGtmz9685y' });
+    salvarSessao({ tipo: 'cliente', id, nome, email });
+    toast(`Conta criada! Bem-vindo, ${nome}!`, 'success');
+    ['cad-nome', 'cad-email', 'cad-senha', 'cad-senha2'].forEach(k => document.getElementById(k).value = '');
     await abrirPainelCliente();
-  } catch(e){
-    const msg = e.code==='auth/email-already-in-use' ? 'E-mail já cadastrado!'
-              : e.code==='auth/weak-password'         ? 'Senha muito fraca!'
-              : 'Erro ao criar conta: ' + (e.message||e.code);
-    toast(msg,'error');
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao criar conta. Tente novamente.', 'error');
+  } finally {
+    setLoading('btn-cad', false);
   }
 }
 
-async function loginCliente(){
+async function loginCliente() {
   const email = document.getElementById('cl-email').value.trim().toLowerCase();
   const senha = document.getElementById('cl-senha').value;
-  if(!email){ toast('Informe o e-mail!','error'); return; }
-  if(!senha){ toast('Informe a senha!','error'); return; }
+  if (!email) { toast('Informe o e-mail!', 'error'); return; }
+  if (!senha) { toast('Informe a senha!', 'error'); return; }
+
+  setLoading('btn-cl-login', true);
   try {
-    const uid = await fbLoginCliente(email, senha);
-    const cli = await db.clientes.get(uid);
-    const nome = cli?.nome || email.split('@')[0];
-    salvarSessao({tipo:'cliente', id: uid, nome, email});
-    document.getElementById('cl-senha').value='';
-    toast(`Bem-vindo de volta, ${nome}!`,'success');
+    const cli = await fsWhereFirst('clientes', 'email', email);
+    if (!cli || cli.senha_hash !== hashSimples(senha)) {
+      toast('E-mail ou senha incorretos!', 'error'); return;
+    }
+    salvarSessao({ tipo: 'cliente', id: cli.id, nome: cli.nome, email: cli.email });
+    document.getElementById('cl-senha').value = '';
+    toast(`Bem-vindo de volta, ${cli.nome}!`, 'success');
     await abrirPainelCliente();
-  } catch(e){
-    const msg = e.code==='auth/invalid-credential'||e.code==='auth/wrong-password'||e.code==='auth/user-not-found'
-              ? 'E-mail ou senha incorretos!'
-              : 'Erro ao entrar: ' + (e.message||e.code);
-    toast(msg,'error');
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao fazer login. Verifique sua conexão.', 'error');
+  } finally {
+    setLoading('btn-cl-login', false);
   }
 }
 
-async function abrirPainelCliente(){
+async function abrirPainelCliente() {
   document.getElementById('cl-nome-exibido').textContent = sessao.nome;
   document.getElementById('nav-cliente').classList.add('visible');
   ir('screen-cliente');
   await renderCliente();
 }
 
-function sairCliente(){
-  fbLogout().catch(()=>{});
+function sairCliente() {
   limparSessao();
   document.getElementById('nav-cliente').classList.remove('visible');
   ir('screen-escolha');
 }
 
-
 // ═══════════════════════════════════════════════
-// SERVIÇOS — CRUD
+// SERVIÇOS — CRUD (Firestore)
 // ═══════════════════════════════════════════════
-async function salvarServico(){
-  const editId     = document.getElementById('svc-edit-id').value;
-  const nome       = document.getElementById('svc-nome').value.trim();
-  const preco      = parseFloat(document.getElementById('svc-preco').value);
-  const duracao_min= parseInt(document.getElementById('svc-duracao').value)||30;
-  if(!nome)          { toast('Informe o nome do serviço!','error'); return; }
-  if(!preco||preco<=0){ toast('Informe um preço válido!','error'); return; }
+async function salvarServico() {
+  const editId      = document.getElementById('svc-edit-id').value;
+  const nome        = document.getElementById('svc-nome').value.trim();
+  const preco       = parseFloat(document.getElementById('svc-preco').value);
+  const duracao_min = parseInt(document.getElementById('svc-duracao').value) || 30;
 
-  if(editId){
-    await db.tabela_precos.update(parseInt(editId), {nome, preco, duracao_min});
-    toast('Serviço atualizado!','success');
-  } else {
-    await db.tabela_precos.add({nome, preco, duracao_min});
-    toast(`Serviço "${nome}" adicionado!`,'success');
+  if (!nome)           { toast('Informe o nome do serviço!', 'error'); return; }
+  if (!preco || preco <= 0) { toast('Informe um preço válido!', 'error'); return; }
+
+  try {
+    if (editId) {
+      await fsUpdate('tabela_precos', editId, { nome, preco, duracao_min });
+      toast('Serviço atualizado!', 'success');
+    } else {
+      await fsAdd('tabela_precos', { nome, preco, duracao_min });
+      toast(`Serviço "${nome}" adicionado!`, 'success');
+    }
+    cancelarEdicaoSvc();
+    await renderServiceList();
+    await populateServicos();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao salvar serviço.', 'error');
   }
-  cancelarEdicaoSvc();
-  await renderServiceList();
-  await populateServicos();
 }
 
-function cancelarEdicaoSvc(){
-  document.getElementById('svc-edit-id').value  = '';
-  document.getElementById('svc-nome').value     = '';
-  document.getElementById('svc-preco').value    = '';
+function cancelarEdicaoSvc() {
+  document.getElementById('svc-edit-id').value = '';
+  document.getElementById('svc-nome').value    = '';
+  document.getElementById('svc-preco').value   = '';
   const dur = document.getElementById('svc-duracao');
-  if(dur) dur.value='30';
+  if (dur) dur.value = '30';
   const btn = document.getElementById('svc-cancel-btn');
-  if(btn) btn.style.display='none';
+  if (btn) btn.style.display = 'none';
 }
 
-async function editarServico(id){
-  const svc = await db.tabela_precos.get(id);
-  if(!svc) return;
+async function editarServico(id) {
+  const svc = await fsGet('tabela_precos', id);
+  if (!svc) return;
   document.getElementById('svc-edit-id').value = id;
   document.getElementById('svc-nome').value    = svc.nome;
   document.getElementById('svc-preco').value   = svc.preco;
   const dur = document.getElementById('svc-duracao');
-  if(dur) dur.value = svc.duracao_min||30;
+  if (dur) dur.value = svc.duracao_min || 30;
   const btn = document.getElementById('svc-cancel-btn');
-  if(btn) btn.style.display='';
-  document.getElementById('admin-config').scrollTo({top:0,behavior:'smooth'});
-  toast('Editando: ' + svc.nome,'default');
+  if (btn) btn.style.display = '';
+  document.getElementById('admin-config').scrollTo({ top: 0, behavior: 'smooth' });
+  toast('Editando: ' + svc.nome);
 }
 
-async function deletarServico(id){
-  const svc = await db.tabela_precos.get(id);
-  if(!svc) return;
-  await db.tabela_precos.delete(id);
-  toast(`"${svc.nome}" removido.`,'default');
+async function deletarServico(id) {
+  const svc = await fsGet('tabela_precos', id);
+  if (!svc) return;
+  await fsDel('tabela_precos', id);
+  toast(`"${svc.nome}" removido.`);
   await renderServiceList();
+  await populateServicos();
 }
 
-async function renderServiceList(){
-  const svcs = await db.tabela_precos.toArray();
+async function renderServiceList() {
+  const svcs = await fsGetAll('tabela_precos');
   const el   = document.getElementById('service-list');
-  if(!svcs.length){
-    el.innerHTML='<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">NENHUM SERVIÇO CADASTRADO</div>';
+  if (!svcs.length) {
+    el.innerHTML = '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">NENHUM SERVIÇO CADASTRADO</div>';
     return;
   }
-  el.innerHTML='';
-  svcs.forEach(s=>{
-    const div=document.createElement('div'); div.className='service-item';
-    div.innerHTML=`
+  el.innerHTML = '';
+  svcs.forEach(s => {
+    const div = document.createElement('div'); div.className = 'service-item';
+    div.innerHTML = `
       <div class="service-item-info">
         <div class="service-item-nome">${s.nome}</div>
-        <div class="service-item-preco">${R(s.preco)} &nbsp;<span style="font-size:9px;color:var(--text-dim)">${s.duracao_min||30}min</span></div>
+        <div class="service-item-preco">${R(s.preco)} &nbsp;<span style="font-size:9px;color:var(--text-dim)">${s.duracao_min || 30}min</span></div>
       </div>
       <div class="service-item-actions">
-        <button class="btn-edit-svc" onclick="editarServico(${s.id})">EDITAR</button>
-        <button class="btn-del-svc"  onclick="deletarServico(${s.id})">DEL</button>
+        <button class="btn-edit-svc" onclick="editarServico('${s.id}')">EDITAR</button>
+        <button class="btn-del-svc"  onclick="deletarServico('${s.id}')">DEL</button>
       </div>`;
     el.appendChild(div);
   });
@@ -1060,11 +1042,11 @@ async function renderServiceList(){
 // ═══════════════════════════════════════════════
 // AUTH — ADMIN / BARBEIRO
 // ═══════════════════════════════════════════════
-async function carregarSelectBarbeiros(){
-  const barbs = await db.barbeiros.toArray();
+async function carregarSelectBarbeiros() {
+  const barbs = await fsGetAll('barbeiros');
   const sel = document.getElementById('adm-usuario');
   sel.innerHTML = '<option value="">Selecione o barbeiro...</option>';
-  barbs.forEach(b=>{
+  barbs.forEach(b => {
     const o = document.createElement('option');
     o.value = b.id;
     o.textContent = `${b.nome} (@${b.usuario})`;
@@ -1072,88 +1054,118 @@ async function carregarSelectBarbeiros(){
   });
 }
 
-async function loginAdmin(){
-  const barbId = parseInt(document.getElementById('adm-usuario').value);
+async function loginAdmin() {
+  const barbId = document.getElementById('adm-usuario').value;
   const senha  = document.getElementById('adm-senha').value;
-  if(!barbId){ toast('Selecione o barbeiro!','error'); return; }
-  if(!senha){  toast('Informe a senha!','error'); return; }
-  const barb = await db.barbeiros.get(barbId);
-  if(!barb||barb.senha_hash!==hashSimples(senha)){ toast('Usuário ou senha incorretos!','error'); return; }
-  salvarSessao({tipo:'admin', barbeiro_id: barb.id, barbeiro_nome: barb.nome, barbeiro_usuario: barb.usuario});
-  document.getElementById('adm-senha').value='';
-  toast(`Bem-vindo, ${barb.nome}!`,'success');
-  await abrirPainelAdmin();
+  if (!barbId) { toast('Selecione o barbeiro!', 'error'); return; }
+  if (!senha)  { toast('Informe a senha!', 'error'); return; }
+
+  setLoading('btn-adm-login', true);
+  try {
+    const barb = await fsGet('barbeiros', barbId);
+    if (!barb || barb.senha_hash !== hashSimples(senha)) {
+      toast('Usuário ou senha incorretos!', 'error'); return;
+    }
+    salvarSessao({ tipo: 'admin', barbeiro_id: barb.id, barbeiro_nome: barb.nome, barbeiro_usuario: barb.usuario });
+    document.getElementById('adm-senha').value = '';
+    toast(`Bem-vindo, ${barb.nome}!`, 'success');
+    await abrirPainelAdmin();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao acessar. Verifique sua conexão.', 'error');
+  } finally {
+    setLoading('btn-adm-login', false);
+  }
 }
 
-async function abrirPainelAdmin(){
+async function abrirPainelAdmin() {
   document.getElementById('admin-barber-name').textContent = sessao.barbeiro_nome || '—';
   document.getElementById('nav-admin').classList.add('visible');
   ir('screen-admin');
   await adminTab('agendamentos');
 }
 
-function sairAdmin(){
+function sairAdmin() {
   limparSessao();
   document.getElementById('nav-admin').classList.remove('visible');
   ir('screen-escolha');
 }
 
-async function trocarSenhaAdmin(){
+async function trocarSenhaAdmin() {
   const atual  = document.getElementById('cfg-atual').value;
   const nova   = document.getElementById('cfg-nova').value;
   const nova2  = document.getElementById('cfg-nova2').value;
-  if(!atual){ toast('Informe a senha atual!','error'); return; }
-  const barb = await db.barbeiros.get(sessao.barbeiro_id);
-  if(!barb||barb.senha_hash!==hashSimples(atual)){ toast('Senha atual incorreta!','error'); return; }
-  if(nova.length<4){ toast('Nova senha deve ter mín. 4 caracteres!','error'); return; }
-  if(nova!==nova2){ toast('As novas senhas não coincidem!','error'); return; }
-  await db.barbeiros.update(sessao.barbeiro_id, {senha_hash: hashSimples(nova)});
-  toast('Senha alterada com sucesso!','success');
-  ['cfg-atual','cfg-nova','cfg-nova2'].forEach(k=>document.getElementById(k).value='');
+  if (!atual) { toast('Informe a senha atual!', 'error'); return; }
+  try {
+    const barb = await fsGet('barbeiros', sessao.barbeiro_id);
+    if (!barb || barb.senha_hash !== hashSimples(atual)) {
+      toast('Senha atual incorreta!', 'error'); return;
+    }
+    if (nova.length < 4) { toast('Nova senha deve ter mín. 4 caracteres!', 'error'); return; }
+    if (nova !== nova2)  { toast('As novas senhas não coincidem!', 'error'); return; }
+    await fsUpdate('barbeiros', sessao.barbeiro_id, { senha_hash: hashSimples(nova) });
+    toast('Senha alterada com sucesso!', 'success');
+    ['cfg-atual', 'cfg-nova', 'cfg-nova2'].forEach(k => document.getElementById(k).value = '');
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao alterar senha.', 'error');
+  }
 }
 
-// ── CRUD Barbeiros (apenas admin master pode fazer isso na prática)
-async function cadastrarBarbeiro(){
+async function cadastrarBarbeiro() {
   const nome    = document.getElementById('nb-nome').value.trim();
   const usuario = document.getElementById('nb-usuario').value.trim().toLowerCase();
   const senha   = document.getElementById('nb-senha').value;
-  if(!nome)           { toast('Informe o nome do barbeiro!','error'); return; }
-  if(!usuario)        { toast('Informe o usuário!','error'); return; }
-  if(senha.length<4)  { toast('Senha deve ter mín. 4 caracteres!','error'); return; }
-  const existe = await db.barbeiros.where('usuario').equals(usuario).first();
-  if(existe){ toast('Usuário já cadastrado!','error'); return; }
-  await db.barbeiros.add({usuario, nome, senha_hash: hashSimples(senha)});
-  toast(`Barbeiro ${nome} cadastrado!`,'success');
-  ['nb-nome','nb-usuario','nb-senha'].forEach(k=>document.getElementById(k).value='');
-  await renderBarberList();
-  await carregarSelectBarbeiros();
+  if (!nome)          { toast('Informe o nome do barbeiro!', 'error'); return; }
+  if (!usuario)       { toast('Informe o usuário!', 'error'); return; }
+  if (senha.length < 4) { toast('Senha deve ter mín. 4 caracteres!', 'error'); return; }
+  try {
+    const existe = await fsWhereFirst('barbeiros', 'usuario', usuario);
+    if (existe) { toast('Usuário já cadastrado!', 'error'); return; }
+    await fsAdd('barbeiros', {
+      usuario, nome, senha_hash: hashSimples(senha),
+      dias_trabalho: [1, 2, 3, 4, 5, 6],
+      hora_inicio: 8, hora_fim: 20, prazo_dias: 30
+    });
+    toast(`Barbeiro ${nome} cadastrado!`, 'success');
+    ['nb-nome', 'nb-usuario', 'nb-senha'].forEach(k => document.getElementById(k).value = '');
+    await renderBarberList();
+    await carregarSelectBarbeiros();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao cadastrar barbeiro.', 'error');
+  }
 }
 
-async function deletarBarbeiro(id){
-  if(id===sessao.barbeiro_id){ toast('Não é possível remover o barbeiro logado!','error'); return; }
-  const barb = await db.barbeiros.get(id);
-  const count = await db.agendamentos.where('barbeiro_id').equals(id).count();
-  if(count>0){ toast(`${barb.nome} tem ${count} agendamento(s). Remova-os primeiro.`,'error'); return; }
-  await db.barbeiros.delete(id);
-  toast('Barbeiro removido.','default');
-  await renderBarberList();
-  await carregarSelectBarbeiros();
+async function deletarBarbeiro(id) {
+  if (id === sessao.barbeiro_id) { toast('Não é possível remover o barbeiro logado!', 'error'); return; }
+  try {
+    const count = (await fsWhere('agendamentos', 'barbeiro_id', id)).length;
+    if (count > 0) { toast(`Barbeiro tem ${count} agendamento(s). Remova-os primeiro.`, 'error'); return; }
+    await fsDel('barbeiros', id);
+    toast('Barbeiro removido.');
+    await renderBarberList();
+    await carregarSelectBarbeiros();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao remover barbeiro.', 'error');
+  }
 }
 
-async function renderBarberList(){
-  const barbs = await db.barbeiros.toArray();
+async function renderBarberList() {
+  const barbs = await fsGetAll('barbeiros');
   const el = document.getElementById('barber-list');
-  if(!barbs.length){ el.innerHTML='<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">NENHUM BARBEIRO</div>'; return; }
-  el.innerHTML='';
-  barbs.forEach(b=>{
-    const isSelf = b.id===sessao.barbeiro_id;
-    const div=document.createElement('div'); div.className='barber-item';
-    div.innerHTML=`
+  if (!barbs.length) { el.innerHTML = '<div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">NENHUM BARBEIRO</div>'; return; }
+  el.innerHTML = '';
+  barbs.forEach(b => {
+    const isSelf = b.id === sessao.barbeiro_id;
+    const div = document.createElement('div'); div.className = 'barber-item';
+    div.innerHTML = `
       <div>
-        <div class="barber-item-name">${b.nome}${isSelf?' <span style="font-family:var(--font-mono);font-size:8px;color:var(--neon)">[VOCÊ]</span>':''}</div>
+        <div class="barber-item-name">${b.nome}${isSelf ? ' <span style="font-family:var(--font-mono);font-size:8px;color:var(--neon)">[VOCÊ]</span>' : ''}</div>
         <div class="barber-item-user">@${b.usuario}</div>
       </div>
-      ${!isSelf?`<button class="btn-del-barber" onclick="deletarBarbeiro(${b.id})">REMOVER</button>`:''}`;
+      ${!isSelf ? `<button class="btn-del-barber" onclick="deletarBarbeiro('${b.id}')">REMOVER</button>` : ''}`;
     el.appendChild(div);
   });
 }
@@ -1162,172 +1174,161 @@ async function renderBarberList(){
 // ADMIN — ABAS
 // ═══════════════════════════════════════════════
 const TABS = {
-  agendamentos:{title:'AGENDAMENTOS',sub:'// BARBEIRO — GESTÃO DE RESERVAS'},
-  caixa:{title:'CONTROLE DE CAIXA',sub:'// FLUXO FINANCEIRO — ENTRADAS'},
-  historico:{title:'HISTÓRICO',sub:'// ATENDIMENTOS REALIZADOS + AVALIAÇÕES'},
-  config:{title:'CONFIGURAÇÕES',sub:'// PAINEL DO ADMINISTRADOR'}
+  agendamentos: { title: 'AGENDAMENTOS',      sub: '// BARBEIRO — GESTÃO DE RESERVAS' },
+  caixa:        { title: 'CONTROLE DE CAIXA', sub: '// FLUXO FINANCEIRO — ENTRADAS'   },
+  historico:    { title: 'HISTÓRICO',          sub: '// ATENDIMENTOS REALIZADOS'       },
+  config:       { title: 'CONFIGURAÇÕES',     sub: '// PAINEL DO ADMINISTRADOR'        }
 };
 
-async function adminTab(tab){
-  ['agendamentos','caixa','historico','config'].forEach(t=>{
-    document.getElementById('admin-'+t).style.display=t===tab?'flex':'none';
+async function adminTab(tab) {
+  ['agendamentos', 'caixa', 'historico', 'config'].forEach(t => {
+    document.getElementById('admin-' + t).style.display = t === tab ? 'flex' : 'none';
   });
-  document.querySelectorAll('[id^="nav-adm-"]').forEach(b=>b.classList.remove('active'));
-  const idMap={agendamentos:'nav-adm-ag',caixa:'nav-adm-cx',historico:'nav-adm-hist',config:'nav-adm-cfg'};
-  const btn=document.getElementById(idMap[tab]); if(btn) btn.classList.add('active');
-  document.getElementById('admin-tab-title').textContent=TABS[tab].title;
-  document.getElementById('admin-tab-sub').textContent=TABS[tab].sub;
-  if(tab==='agendamentos'){ await marcarLidos(); await renderAdmin(); }
-  if(tab==='caixa')        await renderCaixa();
-  if(tab==='historico')    await renderHistoricoAdmin();
-  if(tab==='config'){      await renderBarberList(); await renderServiceList(); cancelarEdicaoSvc(); carregarHorarioTrabalho(); }
+  document.querySelectorAll('[id^="nav-adm-"]').forEach(b => b.classList.remove('active'));
+  const idMap = { agendamentos: 'nav-adm-ag', caixa: 'nav-adm-cx', historico: 'nav-adm-hist', config: 'nav-adm-cfg' };
+  const btn = document.getElementById(idMap[tab]); if (btn) btn.classList.add('active');
+  document.getElementById('admin-tab-title').textContent = TABS[tab].title;
+  document.getElementById('admin-tab-sub').textContent   = TABS[tab].sub;
+  if (tab === 'agendamentos') { await marcarLidos(); await renderAdmin(); }
+  if (tab === 'caixa')        await renderCaixa();
+  if (tab === 'historico')    await renderHistoricoAdmin();
+  if (tab === 'config')       { await renderBarberList(); await renderServiceList(); cancelarEdicaoSvc(); carregarHorarioTrabalho(); }
 }
 
 // ═══════════════════════════════════════════════
 // PAINEL CLIENTE — RENDER
 // ═══════════════════════════════════════════════
-
-// ── Popula select de barbeiros no formulário do cliente
-async function populateBarbeirosCliente(){
-  const barbs = await db.barbeiros.toArray();
+async function populateBarbeirosCliente() {
+  const barbs = await fsGetAll('barbeiros');
   const sel = document.getElementById('inp-barbeiro');
   sel.innerHTML = '<option value="">Selecione um barbeiro...</option>';
-  barbs.forEach(b=>{
-    const o=document.createElement('option');
-    o.value=b.id; o.dataset.nome=b.nome;
-    o.textContent=b.nome;
+  barbs.forEach(b => {
+    const o = document.createElement('option');
+    o.value = b.id;
+    o.textContent = b.nome;
     sel.appendChild(o);
   });
 }
 
-// ── Reage à mudança de DATA ou BARBEIRO — recarrega horários disponíveis
-async function onDataOuBarbeiroChange(){
+async function onDataOuBarbeiroChange() {
   await populateHorasDisponiveis();
 }
 
-// ── BLOQUEIO DE HORÁRIOS: popula apenas slots livres para [data+barbeiro]
-async function populateHorasDisponiveis(){
-  const data      = document.getElementById('inp-data').value;
-  const barbeiroId= parseInt(document.getElementById('inp-barbeiro').value);
-  const sel       = document.getElementById('inp-hora');
-  const hint      = document.getElementById('slots-hint');
-  const hintTxt   = document.getElementById('slots-hint-txt');
+async function populateHorasDisponiveis() {
+  const data       = document.getElementById('inp-data').value;
+  const barbeiroId = document.getElementById('inp-barbeiro').value;
+  const sel        = document.getElementById('inp-hora');
+  const hint       = document.getElementById('slots-hint');
+  const hintTxt    = document.getElementById('slots-hint-txt');
 
-  // Carrega config do barbeiro
-  let horaInicio=8, horaFim=20, diasTrab=[1,2,3,4,5,6];
-  if(barbeiroId){
-    const barbConf = await db.barbeiros.get(barbeiroId).catch(()=>null);
-    if(barbConf){
+  let horaInicio = 8, horaFim = 20, diasTrab = [1, 2, 3, 4, 5, 6];
+
+  if (barbeiroId) {
+    const barbConf = await fsGet('barbeiros', barbeiroId).catch(() => null);
+    if (barbConf) {
       horaInicio = barbConf.hora_inicio ?? 8;
       horaFim    = barbConf.hora_fim    ?? 20;
-      diasTrab   = barbConf.dias_trabalho ?? [1,2,3,4,5,6];
-      // Verifica prazo máximo
+      diasTrab   = barbConf.dias_trabalho ?? [1, 2, 3, 4, 5, 6];
       const prazo = barbConf.prazo_dias || 30;
-      if(data){
-        const dataLimite = new Date(); dataLimite.setDate(dataLimite.getDate()+prazo);
-        if(new Date(data) > dataLimite){
-          sel.innerHTML='<option disabled>Data além do prazo de agendamento</option>';
-          hint.style.display='flex'; hintTxt.textContent=`Máx. ${prazo} dias de antecedência`;
+      if (data) {
+        const dataLimite = new Date(); dataLimite.setDate(dataLimite.getDate() + prazo);
+        if (new Date(data) > dataLimite) {
+          sel.innerHTML = '<option disabled>Data além do prazo de agendamento</option>';
+          hint.style.display = 'flex'; hintTxt.textContent = `Máx. ${prazo} dias de antecedência`;
           return;
         }
       }
     }
   }
 
-  // Verifica dia da semana
-  if(data){
-    const diaSemana = new Date(data+'T12:00:00').getDay();
-    if(!diasTrab.includes(diaSemana)){
-      sel.innerHTML='<option disabled>Barbeiro não atende neste dia</option>';
-      hint.style.display='flex'; hintTxt.textContent='Dia fora do horário de trabalho';
+  if (data) {
+    const diaSemana = new Date(data + 'T12:00:00').getDay();
+    if (!diasTrab.includes(diaSemana)) {
+      sel.innerHTML = '<option disabled>Barbeiro não atende neste dia</option>';
+      hint.style.display = 'flex'; hintTxt.textContent = 'Dia fora do horário de trabalho';
       return;
     }
   }
 
-  // Todos os horários possíveis no range do barbeiro
   const allSlots = [];
-  for(let h=horaInicio;h<=horaFim;h++) for(let m of [0,30]) {
-    if(h===horaFim&&m===30) break;
-    allSlots.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  for (let h = horaInicio; h <= horaFim; h++) for (let m of [0, 30]) {
+    if (h === horaFim && m === 30) break;
+    allSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
   }
 
-  if(!data || !barbeiroId){
-    sel.innerHTML='';
-    allSlots.forEach(s=>{
-      const o=document.createElement('option'); o.value=o.textContent=s; sel.appendChild(o);
+  if (!data || !barbeiroId) {
+    sel.innerHTML = '';
+    allSlots.forEach(s => {
+      const o = document.createElement('option'); o.value = o.textContent = s; sel.appendChild(o);
     });
-    hint.style.display='none';
+    hint.style.display = 'none';
     return;
   }
 
-  // Busca agendamentos existentes para aquele barbeiro+data
-  const ocupados = await db.agendamentos
-    .where('[barbeiro_id+data]').equals([barbeiroId, data])
-    .toArray()
-    .catch(async ()=>{
-      // Índice composto pode não existir em todos os browsers — fallback manual
-      return db.agendamentos.filter(a=>a.barbeiro_id===barbeiroId && a.data===data).toArray();
-    });
+  // Busca agendamentos para barbeiro + data no Firestore
+  const snap = await db.collection('agendamentos')
+    .where('barbeiro_id', '==', barbeiroId)
+    .where('data', '==', data)
+    .get();
+  const horasOcupadas = new Set(snap.docs.map(d => d.data().hora));
 
-  const horasOcupadas = new Set(ocupados.map(a=>a.hora));
-  const livres = allSlots.filter(s=>!horasOcupadas.has(s));
-
-  sel.innerHTML='';
-  allSlots.forEach(s=>{
-    const o=document.createElement('option');
-    o.value=o.textContent=s;
-    if(horasOcupadas.has(s)){
-      o.disabled=true;
-      o.textContent=`${s} — OCUPADO`;
+  sel.innerHTML = '';
+  allSlots.forEach(s => {
+    const o = document.createElement('option');
+    o.value = o.textContent = s;
+    if (horasOcupadas.has(s)) {
+      o.disabled = true;
+      o.textContent = `${s} — OCUPADO`;
     }
     sel.appendChild(o);
   });
 
-  // Garante que o valor selecionado seja um slot livre
-  if(horasOcupadas.has(sel.value)){
-    const primeiroLivre = allSlots.find(s=>!horasOcupadas.has(s));
-    if(primeiroLivre) sel.value=primeiroLivre;
+  // Garante que o valor selecionado seja livre
+  if (horasOcupadas.has(sel.value)) {
+    const primeiroLivre = allSlots.find(s => !horasOcupadas.has(s));
+    if (primeiroLivre) sel.value = primeiroLivre;
   }
 
   const qtdOcupados = horasOcupadas.size;
-  if(qtdOcupados>0){
-    hint.style.display='flex';
-    hintTxt.textContent=`${qtdOcupados} horário${qtdOcupados>1?'s':''} indisponível${qtdOcupados>1?'s':''} neste dia`;
+  if (qtdOcupados > 0) {
+    hint.style.display = 'flex';
+    hintTxt.textContent = `${qtdOcupados} horário${qtdOcupados > 1 ? 's' : ''} indisponível${qtdOcupados > 1 ? 'is' : ''} neste dia`;
   } else {
-    hint.style.display='none';
+    hint.style.display = 'none';
   }
 }
 
-function setDates(){
-  const hj=hoje();
-  const d=document.getElementById('inp-data'); if(d){d.value=hj;d.min=hj;}
-  const cd=document.getElementById('cx-data'); if(cd){cd.value=hj;cd.max=hj;}
+function setDates() {
+  const hj = hoje();
+  const d  = document.getElementById('inp-data'); if (d) { d.value = hj; d.min = hj; }
+  const cd = document.getElementById('cx-data');  if (cd) { cd.value = hj; cd.max = hj; }
 }
 
-async function populateServicos(){
-  const sv=await db.tabela_precos.toArray();
-  const sel=document.getElementById('inp-servico'); sel.innerHTML='';
-  sv.forEach(s=>{
-    const o=document.createElement('option');
-    o.value=s.id; o.dataset.nome=s.nome; o.dataset.preco=s.preco;
-    o.textContent=`${s.nome}  —  ${R(s.preco)}`;
+async function populateServicos() {
+  const sv  = await fsGetAll('tabela_precos');
+  const sel = document.getElementById('inp-servico');
+  sel.innerHTML = '';
+  sv.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id; o.dataset.nome = s.nome; o.dataset.preco = s.preco;
+    o.textContent = `${s.nome}  —  ${R(s.preco)}`;
     sel.appendChild(o);
   });
   updatePreview();
 }
 
-function updatePreview(){
-  const sel=document.getElementById('inp-servico');
-  const opt=sel?.options[sel.selectedIndex];
-  document.getElementById('preview-val').textContent=R(opt?.dataset?.preco||0);
+function updatePreview() {
+  const sel = document.getElementById('inp-servico');
+  const opt = sel?.options[sel.selectedIndex];
+  document.getElementById('preview-val').textContent = R(opt?.dataset?.preco || 0);
 }
 
-async function renderCliente(){
-  const sv=await db.tabela_precos.toArray();
-  const pl=document.getElementById('price-list'); pl.innerHTML='';
-  sv.forEach(s=>{
-    const d=document.createElement('div'); d.className='price-item';
-    d.innerHTML=`<span class="price-item-name">${s.nome}</span><span class="price-item-val">${R(s.preco)}</span>`;
+async function renderCliente() {
+  const sv = await fsGetAll('tabela_precos');
+  const pl = document.getElementById('price-list'); pl.innerHTML = '';
+  sv.forEach(s => {
+    const d = document.createElement('div'); d.className = 'price-item';
+    d.innerHTML = `<span class="price-item-name">${s.nome}</span><span class="price-item-val">${R(s.preco)}</span>`;
     pl.appendChild(d);
   });
   setDates();
@@ -1337,60 +1338,69 @@ async function renderCliente(){
   await renderMeusAgendamentos();
 }
 
-async function renderMeusAgendamentos(){
-  if(!sessao||sessao.tipo!=='cliente') return;
-  const todos = await db.agendamentos.where('cliente_id').equals(sessao.id).toArray();
-  todos.sort((a,b)=>a.data.localeCompare(b.data)||a.hora.localeCompare(b.hora));
+async function renderMeusAgendamentos() {
+  if (!sessao || sessao.tipo !== 'cliente') return;
+
+  const todos = await fsWhere('agendamentos', 'cliente_id', sessao.id);
+  todos.sort((a, b) => a.data.localeCompare(b.data) || a.hora.localeCompare(b.hora));
+
   const el = document.getElementById('meus-agendamentos');
-  if(!todos.length){
-    el.innerHTML=`<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>NENHUM AGENDAMENTO</div>`;
-    return;
+
+  if (!todos.length) {
+    el.innerHTML = `<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>NENHUM AGENDAMENTO</div>`;
+  } else {
+    el.innerHTML = '';
+    // Mapa de barbeiros para exibição
+    const barbs  = await fsGetAll('barbeiros');
+    const barbMap = {};
+    barbs.forEach(b => barbMap[b.id] = b.nome);
+
+    todos.forEach(a => {
+      const bNome = barbMap[a.barbeiro_id] || '—';
+      const agDataHora  = new Date(a.data + 'T' + a.hora + ':00');
+      const podeCancelar = (agDataHora - new Date()) > 2 * 60 * 60 * 1000;
+      const c = document.createElement('div'); c.className = 'meu-ag-card';
+      c.innerHTML = `
+        <div class="meu-ag-header">
+          <div><div class="meu-ag-nome">${a.servico}</div><div class="meu-ag-svc">${a.nome_cliente}</div></div>
+          <div class="meu-ag-preco">${R(a.preco)}</div>
+        </div>
+        <div class="meu-ag-meta">
+          <div class="meu-chip">${fmtDt(a.data)}</div>
+          <div class="meu-chip">${a.hora}</div>
+          <div class="meu-chip barber">✂ ${bNome}</div>
+        </div>
+        ${podeCancelar
+          ? `<button class="btn-cancel-ag" onclick="cancelarAgendamento('${a.id}')">✕ CANCELAR RESERVA</button>`
+          : `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);text-align:center;padding:6px">CANCELAMENTO ENCERRADO (< 2H)</div>`
+        }`;
+      el.appendChild(c);
+    });
   }
 
-  // Busca nomes dos barbeiros para exibir
-  const barbMap={};
-  const barbs = await db.barbeiros.toArray();
-  barbs.forEach(b=>barbMap[b.id]=b.nome);
-
-  el.innerHTML='';
-  todos.forEach(a=>{
-    const bNome = barbMap[a.barbeiro_id]||'—';
-    const agDataHora = new Date(a.data+'T'+a.hora+':00');
-    const podeCancelar = (agDataHora - new Date()) > 2*60*60*1000;
-    const c=document.createElement('div'); c.className='meu-ag-card';
-    c.innerHTML=`
-      <div class="meu-ag-header">
-        <div><div class="meu-ag-nome">${a.servico}</div><div class="meu-ag-svc">${a.nome_cliente}</div></div>
-        <div class="meu-ag-preco">${R(a.preco)}</div>
-      </div>
-      <div class="meu-ag-meta">
-        <div class="meu-chip">${fmtDt(a.data)}</div>
-        <div class="meu-chip">${a.hora}</div>
-        <div class="meu-chip barber">✂ ${bNome}</div>
-      </div>
-      ${podeCancelar
-        ? `<button class="btn-cancel-ag" onclick="cancelarAgendamento(${a.id})">✕ CANCELAR RESERVA</button>`
-        : `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);text-align:center;padding:6px">CANCELAMENTO ENCERRADO (< 2H)</div>`
-      }`;
-    el.appendChild(c);
-  });
-
-  // Fila de espera do cliente
-  const filas = await db.fila_espera.where('cliente_id').equals(sessao.id).toArray();
-  if(filas.length){
+  // Fila de espera
+  const filas = await fsWhere('fila_espera', 'cliente_id', sessao.id);
+  if (filas.length) {
     const filaDiv = document.createElement('div');
     filaDiv.innerHTML = '<div class="section-label" style="margin-top:8px">// FILA DE ESPERA</div>';
     el.appendChild(filaDiv);
-    for(const f of filas){
-      const bN = barbMap[f.barbeiro_id]||'—';
-      const svc = await db.tabela_precos.get(f.servico_id).catch(()=>null);
-      // Conta posição na fila
-      const todasFilas = await db.fila_espera.filter(x=>x.barbeiro_id===f.barbeiro_id&&x.data===f.data&&x.hora===f.hora).toArray();
-      const pos = todasFilas.sort((a,b)=>a.id-b.id).findIndex(x=>x.id===f.id)+1;
-      const fc = document.createElement('div'); fc.className='fila-card';
-      fc.innerHTML=`
+    const barbs  = await fsGetAll('barbeiros');
+    const barbMap = {};
+    barbs.forEach(b => barbMap[b.id] = b.nome);
+    for (const f of filas) {
+      const bN  = barbMap[f.barbeiro_id] || '—';
+      const svc = f.servico_id ? await fsGet('tabela_precos', f.servico_id).catch(() => null) : null;
+      const todasFilas = await db.collection('fila_espera')
+        .where('barbeiro_id', '==', f.barbeiro_id)
+        .where('data', '==', f.data)
+        .where('hora', '==', f.hora)
+        .get();
+      const sorted = todasFilas.docs.sort((a, b) => a.data()._createdAt - b.data()._createdAt);
+      const pos = sorted.findIndex(d => d.id === f.id) + 1;
+      const fc = document.createElement('div'); fc.className = 'fila-card';
+      fc.innerHTML = `
         <div class="fila-header">
-          <div class="fila-title">✂ ${svc?.nome||'Serviço'}</div>
+          <div class="fila-title">✂ ${svc?.nome || 'Serviço'}</div>
           <div class="fila-pos">#${pos} NA FILA</div>
         </div>
         <div class="meu-ag-meta">
@@ -1398,169 +1408,175 @@ async function renderMeusAgendamentos(){
           <div class="meu-chip">${f.hora}</div>
           <div class="meu-chip barber">${bN}</div>
         </div>
-        <button class="btn-cancel-ag" onclick="sairDaFila(${f.id})" style="border-color:rgba(56,189,248,0.25);color:var(--info)">✕ SAIR DA FILA</button>`;
+        <button class="btn-cancel-ag" onclick="sairDaFila('${f.id}')" style="border-color:rgba(56,189,248,0.25);color:var(--info)">✕ SAIR DA FILA</button>`;
       el.appendChild(fc);
     }
   }
 
-  // Histórico para avaliação pendente
-  const histPend = await db.historico.where('cliente_id').equals(sessao.id).toArray();
-  const jaAvaliados = await db.avaliacoes.where('cliente_id').equals(sessao.id).toArray();
-  const avIds = new Set(jaAvaliados.map(a=>a.historico_id));
-  const pendentes = histPend.filter(h=>!avIds.has(h.id));
-  if(pendentes.length){
+  // Avaliações pendentes
+  const histPend = await fsWhere('historico', 'cliente_id', sessao.id);
+  const jaAvaliados = await fsWhere('avaliacoes', 'cliente_id', sessao.id);
+  const avIds = new Set(jaAvaliados.map(a => a.historico_id));
+  const pendentes = histPend.filter(h => !avIds.has(h.id));
+  if (pendentes.length) {
     const pendDiv = document.createElement('div');
-    pendDiv.innerHTML='<div class="section-label" style="margin-top:8px">// AVALIAR ATENDIMENTO</div>';
+    pendDiv.innerHTML = '<div class="section-label" style="margin-top:8px">// AVALIAR ATENDIMENTO</div>';
     el.appendChild(pendDiv);
-    pendentes.slice(0,3).forEach(h=>{
-      const bN = barbMap[h.barbeiro_id]||'—';
-      const pc=document.createElement('div'); pc.className='meu-ag-card';
-      pc.style.borderColor='rgba(255,215,0,0.3)';
-      pc.innerHTML=`
+    const barbs   = await fsGetAll('barbeiros');
+    const barbMap = {};
+    barbs.forEach(b => barbMap[b.id] = b.nome);
+    pendentes.slice(0, 3).forEach(h => {
+      const bN = barbMap[h.barbeiro_id] || '—';
+      const pc = document.createElement('div'); pc.className = 'meu-ag-card';
+      pc.style.borderColor = 'rgba(255,215,0,0.3)';
+      pc.innerHTML = `
         <div class="meu-ag-header">
           <div><div class="meu-ag-nome">${h.servico}</div><div class="meu-ag-svc">${fmtDt(h.data)} · ✂ ${bN}</div></div>
           <div class="meu-ag-preco">${R(h.preco)}</div>
         </div>
-        <button class="btn-primary" style="padding:10px;font-size:13px;background:linear-gradient(135deg,#b8860b,#FFD700);color:#09090b" onclick="abrirModalAvaliacao(${h.id},'${h.servico}','${bN}')">⭐ AVALIAR ATENDIMENTO</button>`;
+        <button class="btn-primary" style="padding:10px;font-size:13px;background:linear-gradient(135deg,#b8860b,#FFD700);color:#09090b" onclick="abrirModalAvaliacao('${h.id}','${h.servico}','${bN}')">⭐ AVALIAR ATENDIMENTO</button>`;
       el.appendChild(pc);
     });
   }
 }
 
 // ═══════════════════════════════════════════════
-// CONFIRMAR AGENDAMENTO — com validação de conflito
+// CONFIRMAR AGENDAMENTO
 // ═══════════════════════════════════════════════
-async function confirmarAgendamento(){
-  if(!sessao||sessao.tipo!=='cliente'){ toast('Faça login primeiro!','error'); return; }
+async function confirmarAgendamento() {
+  if (!sessao || sessao.tipo !== 'cliente') { toast('Faça login primeiro!', 'error'); return; }
 
   const data       = document.getElementById('inp-data').value;
   const hora       = document.getElementById('inp-hora').value;
-  const barbeiroId = parseInt(document.getElementById('inp-barbeiro').value);
+  const barbeiroId = document.getElementById('inp-barbeiro').value;
   const sel        = document.getElementById('inp-servico');
   const opt        = sel.options[sel.selectedIndex];
 
-  if(!data)       { toast('Selecione uma data!','error'); return; }
-  if(!hora)       { toast('Selecione um horário!','error'); return; }
-  if(!barbeiroId) { toast('Selecione um barbeiro!','error'); return; }
+  if (!data)       { toast('Selecione uma data!', 'error'); return; }
+  if (!hora)       { toast('Selecione um horário!', 'error'); return; }
+  if (!barbeiroId) { toast('Selecione um barbeiro!', 'error'); return; }
 
-  // Verifica prazo máximo de agendamento
-  const barb2 = await db.barbeiros.get(barbeiroId);
-  const prazoMax = barb2?.prazo_dias || 30;
-  const dataLimite = new Date(); dataLimite.setDate(dataLimite.getDate() + prazoMax);
-  if(new Date(data) > dataLimite){
-    toast(`Este barbeiro aceita agendamentos com até ${prazoMax} dias de antecedência.`,'error'); return;
-  }
+  setLoading('btn-confirmar-ag', true);
+  try {
+    const barb     = await fsGet('barbeiros', barbeiroId);
+    const prazoMax = barb?.prazo_dias || 30;
+    const dataLimite = new Date(); dataLimite.setDate(dataLimite.getDate() + prazoMax);
+    if (new Date(data) > dataLimite) {
+      toast(`Máx. ${prazoMax} dias de antecedência para este barbeiro.`, 'error'); return;
+    }
 
-  // Verifica slot selecionado ainda disponível (anti-race-condition)
-  const conflito = await db.agendamentos
-    .filter(a => a.barbeiro_id===barbeiroId && a.data===data && a.hora===hora)
-    .first();
+    // Verifica conflito em tempo real (anti race-condition)
+    const conflitoSnap = await db.collection('agendamentos')
+      .where('barbeiro_id', '==', barbeiroId)
+      .where('data', '==', data)
+      .where('hora', '==', hora)
+      .limit(1).get();
 
-  if(conflito){
-    beepError();
-    toast('Horário ocupado! Você pode entrar na fila de espera.','error');
+    if (!conflitoSnap.empty) {
+      beepError();
+      toast('Horário ocupado! Tente outro ou entre na fila de espera.', 'error');
+      await populateHorasDisponiveis();
+      const svcId = opt?.value || '';
+      abrirModalFila(barbeiroId, data, hora, svcId);
+      return;
+    }
+
+    const preco   = parseFloat(opt.dataset.preco);
+    const bNome   = barb ? barb.nome : 'Barbeiro';
+
+    beep();
+
+    const agId = await fsAdd('agendamentos', {
+      cliente_id:   sessao.id,
+      barbeiro_id:  barbeiroId,
+      nome_cliente: sessao.nome,
+      data, hora,
+      servico: opt.dataset.nome,
+      preco,
+      status: 'confirmado',
+      visualizado: 0
+    });
+
+    // Registra na caixa
+    await fsAdd('caixa', {
+      barbeiro_id: barbeiroId,
+      descricao:   `${opt.dataset.nome} — ${sessao.nome}`,
+      valor: preco,
+      data,
+      hora: horaAgora(),
+      tipo: 'agendamento',
+      ref_id: agId
+    });
+
+    toast(`Reserva confirmada com ${bNome}! ${R(preco)}`, 'success');
+    setDates();
     await populateHorasDisponiveis();
-    // Abre modal de fila de espera
-    const selSvcFila = document.getElementById('inp-servico');
-    const svcIdFila  = parseInt(selSvcFila?.value||0);
-    abrirModalFila(barbeiroId, data, hora, svcIdFila);
-    return;
+    await renderMeusAgendamentos();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao confirmar reserva. Tente novamente.', 'error');
+  } finally {
+    setLoading('btn-confirmar-ag', false);
   }
-
-  const preco = parseFloat(opt.dataset.preco);
-  const barbeiroNome = opt.dataset.nome || ''; // reutilizamos nome do serviço abaixo
-
-  // Busca nome do barbeiro para registro no caixa
-  const barb = await db.barbeiros.get(barbeiroId);
-  const bNome = barb ? barb.nome : 'Barbeiro';
-
-  beep();
-
-  const agId = await db.agendamentos.add({
-    cliente_id: sessao.id,
-    barbeiro_id: barbeiroId,
-    nome_cliente: sessao.nome,
-    data, hora,
-    servico: opt.dataset.nome,
-    preco,
-    status: 'confirmado',
-    visualizado: 0
-  });
-
-  await db.caixa.add({
-    barbeiro_id: barbeiroId,
-    descricao: `${opt.dataset.nome} — ${sessao.nome}`,
-    valor: preco,
-    data,
-    hora: horaAgora(),
-    tipo: 'agendamento',
-    ref_id: agId
-  });
-
-  toast(`Reserva confirmada com ${bNome}! ${R(preco)}`,'success');
-  setDates();
-  await populateHorasDisponiveis(); // Atualiza slots após confirmação
-  await renderMeusAgendamentos();
 }
 
-async function cancelarAgendamento(id){
-  const ag = await db.agendamentos.get(id);
-  if(!ag){ toast('Agendamento não encontrado.','error'); return; }
+async function cancelarAgendamento(id) {
+  const ag = await fsGet('agendamentos', id);
+  if (!ag) { toast('Agendamento não encontrado.', 'error'); return; }
 
-  // Verifica prazo de cancelamento (mín 2h de antecedência)
   const agDataHora = new Date(ag.data + 'T' + ag.hora + ':00');
-  const diffMs = agDataHora - new Date();
-  const diffHoras = diffMs / (1000*60*60);
-  if(diffHoras < 2 && diffHoras > 0){
-    toast('Cancelamento permitido com no mín. 2h de antecedência!','error');
-    return;
+  if ((agDataHora - new Date()) < 2 * 60 * 60 * 1000) {
+    toast('Cancelamento permitido com no mín. 2h de antecedência!', 'error'); return;
   }
+  try {
+    // Remove entrada do caixa relacionada
+    const cxSnap = await db.collection('caixa').where('ref_id', '==', id).limit(1).get();
+    if (!cxSnap.empty) await fsDel('caixa', cxSnap.docs[0].id);
 
-  const cx = await db.caixa.where('ref_id').equals(id).first();
-  if(cx) await db.caixa.delete(cx.id);
-  await db.agendamentos.delete(id);
-
-  // Notifica fila de espera para esse slot
-  await notificarFila(ag.barbeiro_id, ag.data, ag.hora);
-
-  toast('Reserva cancelada.','default');
-  await populateHorasDisponiveis();
-  await renderMeusAgendamentos();
+    await fsDel('agendamentos', id);
+    await notificarFila(ag.barbeiro_id, ag.data, ag.hora);
+    toast('Reserva cancelada.');
+    await populateHorasDisponiveis();
+    await renderMeusAgendamentos();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao cancelar reserva.', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════
-// ADMIN — AGENDAMENTOS (isolado por barbeiro)
+// ADMIN — AGENDAMENTOS
 // ═══════════════════════════════════════════════
-async function marcarLidos(){
-  const nl = await db.agendamentos
-    .filter(a => a.barbeiro_id===sessao.barbeiro_id && a.visualizado===0)
-    .toArray();
-  for(const a of nl) await db.agendamentos.update(a.id,{visualizado:1});
+async function marcarLidos() {
+  const snap = await db.collection('agendamentos')
+    .where('barbeiro_id', '==', sessao.barbeiro_id)
+    .where('visualizado', '==', 0)
+    .get();
+  const batch = db.batch();
+  snap.docs.forEach(d => batch.update(d.ref, { visualizado: 1 }));
+  if (!snap.empty) await batch.commit();
 }
 
-async function renderAdmin(){
-  // Filtra APENAS agendamentos do barbeiro logado
-  const ag = await db.agendamentos
-    .filter(a => a.barbeiro_id===sessao.barbeiro_id)
-    .toArray();
-  ag.sort((a,b)=>a.data.localeCompare(b.data)||a.hora.localeCompare(b.hora));
+async function renderAdmin() {
+  const ag = await fsWhere('agendamentos', 'barbeiro_id', sessao.barbeiro_id);
+  ag.sort((a, b) => a.data.localeCompare(b.data) || a.hora.localeCompare(b.hora));
 
-  document.getElementById('kpi-total').textContent   = ag.length;
-  document.getElementById('kpi-ganhos').textContent  = R(ag.reduce((s,a)=>s+(+a.preco||0),0));
+  document.getElementById('kpi-total').textContent  = ag.length;
+  document.getElementById('kpi-ganhos').textContent = R(ag.reduce((s, a) => s + (+a.preco || 0), 0));
 
   const list = document.getElementById('agenda-list');
-  if(!ag.length){
-    list.innerHTML=`<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>NENHUM AGENDAMENTO</div>`;
+  if (!ag.length) {
+    list.innerHTML = `<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/></svg>NENHUM AGENDAMENTO</div>`;
     return;
   }
-  list.innerHTML='';
-  ag.forEach(a=>{
-    const novo = a.visualizado===0;
-    const card=document.createElement('div'); card.className='agenda-card'+(novo?' novo':'');
-    card.innerHTML=`
-      ${novo?'<span class="badge-novo">NOVO</span>':''}
+  list.innerHTML = '';
+  ag.forEach(a => {
+    const novo = a.visualizado === 0;
+    const card = document.createElement('div'); card.className = 'agenda-card' + (novo ? ' novo' : '');
+    card.innerHTML = `
+      ${novo ? '<span class="badge-novo">NOVO</span>' : ''}
       <div class="agenda-header">
-        <div class="agenda-avatar">${a.nome_cliente.charAt(0).toUpperCase()}</div>
+        <div class="agenda-avatar">${(a.nome_cliente || '?').charAt(0).toUpperCase()}</div>
         <div class="agenda-info">
           <div class="agenda-name">${a.nome_cliente}</div>
           <div class="agenda-service">${a.servico}</div>
@@ -1571,78 +1587,77 @@ async function renderAdmin(){
         <div class="meta-chip"><span class="meta-lbl">HORA</span><span class="meta-v">${a.hora}</span></div>
         <div class="meta-chip"><span class="meta-lbl">VALOR</span><span class="meta-v neon">${Rc(a.preco)}</span></div>
       </div>
-      <button class="btn-done" onclick="concluir(${a.id})">✓ CONCLUIR / REMOVER</button>`;
+      <button class="btn-done" onclick="concluir('${a.id}')">✓ CONCLUIR / REMOVER</button>`;
     list.appendChild(card);
   });
 }
 
-async function concluir(id){
-  const ag = await db.agendamentos.get(id);
-  if(ag){
-    // Salva no histórico permanente
-    await db.historico.add({
-      barbeiro_id: ag.barbeiro_id,
-      cliente_id:  ag.cliente_id,
-      data:        ag.data,
-      hora:        ag.hora,
-      servico:     ag.servico,
-      preco:       ag.preco,
-      nome_cliente:ag.nome_cliente
+async function concluir(id) {
+  const ag = await fsGet('agendamentos', id);
+  if (ag) {
+    await fsAdd('historico', {
+      barbeiro_id:  ag.barbeiro_id,
+      cliente_id:   ag.cliente_id,
+      data:         ag.data,
+      hora:         ag.hora,
+      servico:      ag.servico,
+      preco:        ag.preco,
+      nome_cliente: ag.nome_cliente
     });
-    // Notifica cliente que pode avaliar (flag na sessão para mostrar modal)
-    if(typeof agendamentoConcluido === 'function') agendamentoConcluido(ag);
   }
-  await db.agendamentos.delete(id);
-  toast('Atendimento concluído! ✓','success');
+  await fsDel('agendamentos', id);
+  toast('Atendimento concluído! ✓', 'success');
   await renderAdmin();
 }
 
 // ═══════════════════════════════════════════════
-// CAIXA (isolada por barbeiro logado)
+// CAIXA
 // ═══════════════════════════════════════════════
-async function lancarManual(){
+async function lancarManual() {
   const desc  = document.getElementById('cx-desc').value.trim();
   const valor = parseFloat(document.getElementById('cx-valor').value);
   const data  = document.getElementById('cx-data').value;
-  if(!desc)       { toast('Informe a descrição!','error'); return; }
-  if(!valor||valor<=0){ toast('Valor inválido!','error'); return; }
-  if(!data)       { toast('Informe a data!','error'); return; }
-  beepCash();
-  await db.caixa.add({
-    barbeiro_id: sessao.barbeiro_id,
-    descricao: desc, valor, data,
-    hora: horaAgora(), tipo: 'manual', ref_id: null
-  });
-  toast(`Entrada: ${R(valor)}`,'success');
-  document.getElementById('cx-desc').value='';
-  document.getElementById('cx-valor').value='';
+  if (!desc)           { toast('Informe a descrição!', 'error'); return; }
+  if (!valor || valor <= 0) { toast('Valor inválido!', 'error'); return; }
+  if (!data)           { toast('Informe a data!', 'error'); return; }
+  try {
+    beepCash();
+    await fsAdd('caixa', {
+      barbeiro_id: sessao.barbeiro_id,
+      descricao: desc, valor, data,
+      hora: horaAgora(), tipo: 'manual', ref_id: null
+    });
+    toast(`Entrada: ${R(valor)}`, 'success');
+    document.getElementById('cx-desc').value  = '';
+    document.getElementById('cx-valor').value = '';
+    await renderCaixa();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao lançar entrada.', 'error');
+  }
+}
+
+async function deletarEntrada(id) {
+  await fsDel('caixa', id);
+  toast('Entrada removida.');
   await renderCaixa();
 }
 
-async function deletarEntrada(id){
-  await db.caixa.delete(id);
-  toast('Entrada removida.','default');
-  await renderCaixa();
-}
+async function renderCaixa() {
+  const todos = await fsWhere('caixa', 'barbeiro_id', sessao.barbeiro_id);
 
-async function renderCaixa(){
-  // Filtra APENAS entradas do barbeiro logado
-  const todos = await db.caixa
-    .filter(c => c.barbeiro_id===sessao.barbeiro_id)
-    .toArray();
-
-  const hj  = hoje();
-  const agora = new Date(), dia=agora.getDay();
-  const diffSeg = dia===0?6:dia-1;
-  const seg = new Date(agora); seg.setDate(agora.getDate()-diffSeg);
+  const hj    = hoje();
+  const agora = new Date(), dia = agora.getDay();
+  const diffSeg = dia === 0 ? 6 : dia - 1;
+  const seg   = new Date(agora); seg.setDate(agora.getDate() - diffSeg);
   const iniSem = seg.toISOString().split('T')[0];
-  const iniMes = `${hj.slice(0,7)}-01`;
+  const iniMes = `${hj.slice(0, 7)}-01`;
 
-  const soma = fn=>todos.filter(fn).reduce((s,e)=>s+(+e.valor||0),0);
-  const total=soma(()=>true), hje=soma(e=>e.data===hj), sem=soma(e=>e.data>=iniSem), mes=soma(e=>e.data>=iniMes);
+  const soma  = fn => todos.filter(fn).reduce((s, e) => s + (+e.valor || 0), 0);
+  const total = soma(() => true), hje = soma(e => e.data === hj), sem = soma(e => e.data >= iniSem), mes = soma(e => e.data >= iniMes);
 
   document.getElementById('caixa-total').textContent = R(total);
-  document.getElementById('caixa-sub').textContent   = `${todos.length} entrada${todos.length!==1?'s':''} registrada${todos.length!==1?'s':''}`;
+  document.getElementById('caixa-sub').textContent   = `${todos.length} entrada${todos.length !== 1 ? 's' : ''} registrada${todos.length !== 1 ? 's' : ''}`;
   document.getElementById('kpi-hoje').textContent    = Rc(hje);
   document.getElementById('kpi-semana').textContent  = Rc(sem);
   document.getElementById('kpi-mes').textContent     = Rc(mes);
@@ -1652,99 +1667,114 @@ async function renderCaixa(){
   setDates();
 }
 
-function renderGrafico(todos){
+function renderGrafico(todos) {
   const hj   = hoje();
-  const dias = []; for(let i=6;i>=0;i--) dias.push(diasAtras(i));
-  const vals = dias.map(d=>({d,v:todos.filter(e=>e.data===d).reduce((s,e)=>s+(+e.valor||0),0)}));
-  const max  = Math.max(...vals.map(t=>t.v),1);
-  const area = document.getElementById('chart-area'); area.innerHTML='';
-  vals.forEach(({d,v})=>{
-    const isHj=d===hj, pct=v>0?Math.max((v/max)*100,5):2;
-    const col=document.createElement('div'); col.className='chart-col';
-    col.innerHTML=`<div class="bar-wrap"><div class="bar${isHj?' hj':''}" style="height:${pct}%;${v===0?'opacity:.25':''}"></div></div><div class="bar-lbl${isHj?' hj':''}">${nomeDia(d)}</div>`;
+  const dias = []; for (let i = 6; i >= 0; i--) dias.push(diasAtras(i));
+  const vals = dias.map(d => ({ d, v: todos.filter(e => e.data === d).reduce((s, e) => s + (+e.valor || 0), 0) }));
+  const max  = Math.max(...vals.map(t => t.v), 1);
+  const area = document.getElementById('chart-area'); area.innerHTML = '';
+  vals.forEach(({ d, v }) => {
+    const isHj = d === hj, pct = v > 0 ? Math.max((v / max) * 100, 5) : 2;
+    const col = document.createElement('div'); col.className = 'chart-col';
+    col.innerHTML = `<div class="bar-wrap"><div class="bar${isHj ? ' hj' : ''}" style="height:${pct}%;${v === 0 ? 'opacity:.25' : ''}"></div></div><div class="bar-lbl${isHj ? ' hj' : ''}">${nomeDia(d)}</div>`;
     area.appendChild(col);
   });
 }
 
-function renderHistorico(todos){
-  const hist=document.getElementById('historico');
-  if(!todos.length){
-    hist.innerHTML=`<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>NENHUMA ENTRADA</div>`;
+function renderHistorico(todos) {
+  const hist = document.getElementById('historico');
+  if (!todos.length) {
+    hist.innerHTML = `<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>NENHUMA ENTRADA</div>`;
     return;
   }
-  const grupos={};
-  todos.forEach(e=>{ if(!grupos[e.data]) grupos[e.data]=[]; grupos[e.data].push(e); });
-  const datas=Object.keys(grupos).sort((a,b)=>b.localeCompare(a));
-  hist.innerHTML='';
-  const hj=hoje();
-  datas.forEach((data,idx)=>{
-    const entradas=grupos[data].sort((a,b)=>(b.hora||'').localeCompare(a.hora||''));
-    const totalDia=entradas.reduce((s,e)=>s+(+e.valor||0),0);
-    const bid=`hb${idx}`;
-    const card=document.createElement('div'); card.className='dia-card';
-    const hojeTag=data===hj?` <span style="font-family:var(--font-mono);font-size:8px;color:var(--neon);border:1px solid rgba(255,107,0,0.3);padding:1px 6px;border-radius:3px;margin-left:6px">HOJE</span>`:'';
-    card.innerHTML=`
+  const grupos = {};
+  todos.forEach(e => { if (!grupos[e.data]) grupos[e.data] = []; grupos[e.data].push(e); });
+  const datas = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
+  hist.innerHTML = '';
+  const hj = hoje();
+  datas.forEach((data, idx) => {
+    const entradas = grupos[data].sort((a, b) => (b.hora || '').localeCompare(a.hora || ''));
+    const totalDia = entradas.reduce((s, e) => s + (+e.valor || 0), 0);
+    const bid = `hb${idx}`;
+    const card = document.createElement('div'); card.className = 'dia-card';
+    const hojeTag = data === hj ? ` <span style="font-family:var(--font-mono);font-size:8px;color:var(--neon);border:1px solid rgba(255,107,0,0.3);padding:1px 6px;border-radius:3px;margin-left:6px">HOJE</span>` : '';
+    card.innerHTML = `
       <div class="dia-hdr" onclick="toggleDia('${bid}')">
-        <div><div class="dia-date">${fmtDt(data)}${hojeTag}</div><div class="dia-count">${entradas.length} entrada${entradas.length!==1?'s':''}</div></div>
+        <div><div class="dia-date">${fmtDt(data)}${hojeTag}</div><div class="dia-count">${entradas.length} entrada${entradas.length !== 1 ? 's' : ''}</div></div>
         <div class="dia-total">${R(totalDia)}</div>
       </div>
       <div class="dia-body" id="${bid}">
-        ${entradas.map(e=>`
+        ${entradas.map(e => `
           <div class="entrada-row">
-            <div><div class="entrada-desc">${e.descricao}</div><div class="entrada-meta">${e.hora||'--:--'}&nbsp;<span class="tag ${e.tipo}">${e.tipo==='agendamento'?'AGEND.':'MANUAL'}</span></div></div>
-            <div class="entrada-dir"><div class="entrada-valor">${R(e.valor)}</div><button class="btn-del" onclick="deletarEntrada(${e.id})">×</button></div>
+            <div><div class="entrada-desc">${e.descricao}</div><div class="entrada-meta">${e.hora || '--:--'}&nbsp;<span class="tag ${e.tipo}">${e.tipo === 'agendamento' ? 'AGEND.' : 'MANUAL'}</span></div></div>
+            <div class="entrada-dir"><div class="entrada-valor">${R(e.valor)}</div><button class="btn-del" onclick="deletarEntrada('${e.id}')">×</button></div>
           </div>`).join('')}
       </div>`;
-    if(data===hj) setTimeout(()=>{ const b=document.getElementById(bid); if(b) b.classList.add('aberto'); },60);
+    if (data === hj) setTimeout(() => { const b = document.getElementById(bid); if (b) b.classList.add('aberto'); }, 60);
     hist.appendChild(card);
   });
 }
 
-function toggleDia(id){ const el=document.getElementById(id); if(el) el.classList.toggle('aberto'); }
-
-// ═══════════════════════════════════════════════
+function toggleDia(id) { const el = document.getElementById(id); if (el) el.classList.toggle('aberto'); }
 
 // ═══════════════════════════════════════════════
 // FILA DE ESPERA
 // ═══════════════════════════════════════════════
 let _filaPayload = null;
 
-function abrirModalFila(barbeiroId, data, hora, svcId){
-  _filaPayload = {barbeiroId, data, hora, svcId};
-  const modal = document.getElementById('modal-fila');
+function abrirModalFila(barbeiroId, data, hora, svcId) {
+  _filaPayload = { barbeiroId, data, hora, svcId };
   document.getElementById('fila-modal-info').textContent =
     `Horário ${hora} de ${fmtDt(data)} está ocupado. Entrar na fila de espera?`;
-  modal.classList.remove('hidden');
+  document.getElementById('modal-fila').classList.remove('hidden');
 }
-function fecharModalFila(){
+function fecharModalFila() {
   document.getElementById('modal-fila').classList.add('hidden');
   _filaPayload = null;
 }
-async function confirmarFila(){
-  if(!_filaPayload || !sessao) return;
-  const {barbeiroId, data, hora, svcId} = _filaPayload;
-  // Verifica se já está na fila
-  const jaFila = await db.fila_espera.filter(f=>f.cliente_id===sessao.id&&f.barbeiro_id===barbeiroId&&f.data===data&&f.hora===hora).first();
-  if(jaFila){ toast('Você já está na fila para este horário!','error'); fecharModalFila(); return; }
-  await db.fila_espera.add({cliente_id:sessao.id, barbeiro_id:barbeiroId, data, hora, servico_id:svcId});
-  beep(440,660,0.2);
-  toast('Você entrou na fila de espera! ✓','success');
-  fecharModalFila();
+
+async function confirmarFila() {
+  if (!_filaPayload || !sessao) return;
+  const { barbeiroId, data, hora, svcId } = _filaPayload;
+  try {
+    // Verifica se já está na fila
+    const jaFilaSnap = await db.collection('fila_espera')
+      .where('cliente_id', '==', sessao.id)
+      .where('barbeiro_id', '==', barbeiroId)
+      .where('data', '==', data)
+      .where('hora', '==', hora)
+      .limit(1).get();
+    if (!jaFilaSnap.empty) { toast('Você já está na fila para este horário!', 'error'); fecharModalFila(); return; }
+
+    await fsAdd('fila_espera', { cliente_id: sessao.id, barbeiro_id: barbeiroId, data, hora, servico_id: svcId });
+    beep(440, 660, 0.2);
+    toast('Você entrou na fila de espera! ✓', 'success');
+    fecharModalFila();
+    await renderMeusAgendamentos();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao entrar na fila.', 'error');
+  }
+}
+
+async function sairDaFila(id) {
+  await fsDel('fila_espera', id);
+  toast('Saiu da fila de espera.');
   await renderMeusAgendamentos();
 }
-async function sairDaFila(id){
-  await db.fila_espera.delete(id);
-  toast('Saiu da fila de espera.','default');
-  await renderMeusAgendamentos();
-}
-async function notificarFila(barbeiroId, data, hora){
-  // Quando um slot é liberado, avisa o primeiro da fila via toast
-  const primeiroFila = await db.fila_espera
-    .filter(f=>f.barbeiro_id===barbeiroId&&f.data===data&&f.hora===hora)
-    .first();
-  if(primeiroFila && sessao && primeiroFila.cliente_id===sessao.id){
-    beep(660,880,0.4);
-    toast(`🎉 Um horário abriu em ${hora} do dia ${fmtDt(data)}! Agende agora.`,'success');
+
+async function notificarFila(barbeiroId, data, hora) {
+  const snap = await db.collection('fila_espera')
+    .where('barbeiro_id', '==', barbeiroId)
+    .where('data', '==', data)
+    .where('hora', '==', hora)
+    .get();
+  if (!snap.empty) {
+    const primeiroId = snap.docs.sort((a, b) => a.data()._createdAt - b.data()._createdAt)[0]?.data().cliente_id;
+    if (primeiroId && sessao && primeiroId === sessao.id) {
+      beep(660, 880, 0.4);
+      toast(`🎉 Um horário abriu em ${hora} do dia ${fmtDt(data)}! Agende agora.`, 'success');
+    }
   }
 }
 
@@ -1753,7 +1783,7 @@ async function notificarFila(barbeiroId, data, hora){
 // ═══════════════════════════════════════════════
 let _avEstrelas = 0;
 
-function abrirModalAvaliacao(histId, svcNome, bNome){
+function abrirModalAvaliacao(histId, svcNome, bNome) {
   _avEstrelas = 0;
   document.getElementById('av-hist-id').value = histId;
   document.getElementById('av-modal-svc').textContent = `${svcNome} · ✂ ${bNome}`;
@@ -1761,97 +1791,97 @@ function abrirModalAvaliacao(histId, svcNome, bNome){
   atualizarEstrelas(0);
   document.getElementById('modal-avaliacao').classList.remove('hidden');
 }
-function fecharModalAvaliacao(){
+function fecharModalAvaliacao() {
   document.getElementById('modal-avaliacao').classList.add('hidden');
 }
-function setEstrela(v){
-  _avEstrelas = v;
-  atualizarEstrelas(v);
-}
-function atualizarEstrelas(v){
-  document.querySelectorAll('#av-star-row .star').forEach(s=>{
+function setEstrela(v) { _avEstrelas = v; atualizarEstrelas(v); }
+function atualizarEstrelas(v) {
+  document.querySelectorAll('#av-star-row .star').forEach(s => {
     s.classList.toggle('on', parseInt(s.dataset.v) <= v);
   });
 }
-async function enviarAvaliacao(){
-  if(!_avEstrelas){ toast('Selecione pelo menos 1 estrela!','error'); return; }
-  const histId     = parseInt(document.getElementById('av-hist-id').value);
+
+async function enviarAvaliacao() {
+  if (!_avEstrelas) { toast('Selecione pelo menos 1 estrela!', 'error'); return; }
+  const histId     = document.getElementById('av-hist-id').value;
   const comentario = document.getElementById('av-comentario').value.trim();
-  const hist       = await db.historico.get(histId);
-  if(!hist){ toast('Atendimento não encontrado.','error'); return; }
-  await db.avaliacoes.add({
-    barbeiro_id:  hist.barbeiro_id,
-    cliente_id:   sessao.id,
-    historico_id: histId,
-    estrelas:     _avEstrelas,
-    comentario,
-    data:         hoje()
-  });
-  beepCash();
-  toast(`Avaliação enviada! ${'★'.repeat(_avEstrelas)}`,'success');
-  fecharModalAvaliacao();
-  await renderMeusAgendamentos();
+  try {
+    const hist = await fsGet('historico', histId);
+    if (!hist) { toast('Atendimento não encontrado.', 'error'); return; }
+    await fsAdd('avaliacoes', {
+      barbeiro_id:  hist.barbeiro_id,
+      cliente_id:   sessao.id,
+      historico_id: histId,
+      estrelas:     _avEstrelas,
+      comentario,
+      data:         hoje()
+    });
+    beepCash();
+    toast(`Avaliação enviada! ${'★'.repeat(_avEstrelas)}`, 'success');
+    fecharModalAvaliacao();
+    await renderMeusAgendamentos();
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao enviar avaliação.', 'error');
+  }
 }
 
 // ═══════════════════════════════════════════════
 // HISTÓRICO ADMIN
 // ═══════════════════════════════════════════════
-async function renderHistoricoAdmin(){
-  const hist = await db.historico.filter(h=>h.barbeiro_id===sessao.barbeiro_id).toArray();
-  hist.sort((a,b)=>b.data.localeCompare(a.data)||b.hora.localeCompare(a.hora));
+async function renderHistoricoAdmin() {
+  const hist = await fsWhere('historico', 'barbeiro_id', sessao.barbeiro_id);
+  hist.sort((a, b) => b.data.localeCompare(a.data) || b.hora.localeCompare(a.hora));
   const total    = hist.length;
-  const faturado = hist.reduce((s,h)=>s+(+h.preco||0),0);
+  const faturado = hist.reduce((s, h) => s + (+h.preco || 0), 0);
   document.getElementById('hist-total').textContent    = total;
   document.getElementById('hist-faturado').textContent = R(faturado);
 
-  // Avaliações do barbeiro
-  const avs = await db.avaliacoes.where('barbeiro_id').equals(sessao.barbeiro_id).toArray();
-  const mediaEst = avs.length ? (avs.reduce((s,a)=>s+a.estrelas,0)/avs.length).toFixed(1) : null;
-
+  const avs = await fsWhere('avaliacoes', 'barbeiro_id', sessao.barbeiro_id);
+  const mediaEst = avs.length ? (avs.reduce((s, a) => s + a.estrelas, 0) / avs.length).toFixed(1) : null;
   const el = document.getElementById('hist-list');
-  el.innerHTML='';
+  el.innerHTML = '';
 
-  if(mediaEst){
+  if (mediaEst) {
     const mediaDiv = document.createElement('div');
-    mediaDiv.style.cssText='background:var(--card);border:1px solid rgba(255,215,0,0.25);border-radius:10px;padding:14px;text-align:center;margin-bottom:4px';
-    const stars = '★'.repeat(Math.round(parseFloat(mediaEst)))+'☆'.repeat(5-Math.round(parseFloat(mediaEst)));
-    mediaDiv.innerHTML=`<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-bottom:6px">// AVALIAÇÃO MÉDIA</div>
+    mediaDiv.style.cssText = 'background:var(--card);border:1px solid rgba(255,215,0,0.25);border-radius:10px;padding:14px;text-align:center;margin-bottom:4px';
+    const stars = '★'.repeat(Math.round(parseFloat(mediaEst))) + '☆'.repeat(5 - Math.round(parseFloat(mediaEst)));
+    mediaDiv.innerHTML = `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-bottom:6px">// AVALIAÇÃO MÉDIA</div>
       <div style="font-size:28px;color:#FFD700;letter-spacing:2px">${stars}</div>
       <div style="font-family:var(--font-mono);font-size:18px;color:#FFD700;margin-top:4px">${mediaEst} / 5.0</div>
-      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-top:4px">${avs.length} avaliação${avs.length!==1?'ões':''}</div>`;
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-top:4px">${avs.length} avaliação${avs.length !== 1 ? 'ões' : ''}</div>`;
     el.appendChild(mediaDiv);
   }
 
-  if(!hist.length){
-    el.innerHTML+='<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>NENHUM ATENDIMENTO CONCLUÍDO</div>';
+  if (!hist.length) {
+    el.innerHTML += '<div class="vazio"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>NENHUM ATENDIMENTO</div>';
     return;
   }
 
-  // Agrupa por dia
-  const grupos={};
-  hist.forEach(h=>{ if(!grupos[h.data]) grupos[h.data]=[]; grupos[h.data].push(h); });
-  const avMap={};
-  avs.forEach(a=>avMap[a.historico_id]=a);
+  const grupos = {};
+  hist.forEach(h => { if (!grupos[h.data]) grupos[h.data] = []; grupos[h.data].push(h); });
+  const avMap = {};
+  avs.forEach(a => avMap[a.historico_id] = a);
 
-  Object.keys(grupos).sort((a,b)=>b.localeCompare(a)).forEach((data,idx)=>{
-    const entries = grupos[data];
-    const totalDia = entries.reduce((s,h)=>s+(+h.preco||0),0);
-    const bid='hhb'+idx;
-    const card=document.createElement('div'); card.className='dia-card';
-    card.innerHTML=`
+  Object.keys(grupos).sort((a, b) => b.localeCompare(a)).forEach((data, idx) => {
+    const entries  = grupos[data];
+    const totalDia = entries.reduce((s, h) => s + (+h.preco || 0), 0);
+    const bid = 'hhb' + idx;
+    const card = document.createElement('div'); card.className = 'dia-card';
+    card.innerHTML = `
       <div class="dia-hdr" onclick="toggleDia('${bid}')">
-        <div><div class="dia-date">${fmtDt(data)}</div><div class="dia-count">${entries.length} atendimento${entries.length!==1?'s':''}</div></div>
+        <div><div class="dia-date">${fmtDt(data)}</div><div class="dia-count">${entries.length} atendimento${entries.length !== 1 ? 's' : ''}</div></div>
         <div class="dia-total">${R(totalDia)}</div>
       </div>
       <div class="dia-body" id="${bid}">
-        ${entries.map(h=>{
+        ${entries.map(h => {
           const av = avMap[h.id];
           return `<div class="entrada-row" style="flex-direction:column;align-items:flex-start;gap:6px">
             <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
-              <div><div class="entrada-desc">${h.servico}</div><div class="entrada-meta">${h.hora} · ${h.nome_cliente||'—'}</div></div>
+              <div><div class="entrada-desc">${h.servico}</div><div class="entrada-meta">${h.hora} · ${h.nome_cliente || '—'}</div></div>
               <div class="entrada-valor">${R(h.preco)}</div>
             </div>
-            ${av?`<div style="font-size:11px;color:#FFD700">${'★'.repeat(av.estrelas)}${av.comentario?` <span style="color:var(--text-dim);font-style:italic">"${av.comentario}"</span>`:''}</div>`:''}
+            ${av ? `<div style="font-size:11px;color:#FFD700">${'★'.repeat(av.estrelas)}${av.comentario ? ` <span style="color:var(--text-dim);font-style:italic">"${av.comentario}"</span>` : ''}</div>` : ''}
           </div>`;
         }).join('')}
       </div>`;
@@ -1860,13 +1890,113 @@ async function renderHistoricoAdmin(){
 }
 
 // ═══════════════════════════════════════════════
-// HORÁRIO DE TRABALHO DO BARBEIRO
+// HORÁRIO DE TRABALHO
 // ═══════════════════════════════════════════════
-function popularSelectsHora(){
-  ['cfg-hora-inicio','cfg-hora-fim'].forEach(id=>{
-    const sel=document.getElementById(id); if(!sel) return;
-    sel.innerHTML='';
-    for(let h=6;h<=23;h++){
-      const o=document.createElement('option');
-      o.value=h; o.textContent=`${String(h).padStart(2,'0')}:00`;
-    
+function popularSelectsHora() {
+  ['cfg-hora-inicio', 'cfg-hora-fim'].forEach(id => {
+    const sel = document.getElementById(id); if (!sel) return;
+    sel.innerHTML = '';
+    for (let h = 6; h <= 23; h++) {
+      const o = document.createElement('option');
+      o.value = h; o.textContent = `${String(h).padStart(2, '0')}:00`;
+      sel.appendChild(o);
+    }
+  });
+  const ini = document.getElementById('cfg-hora-inicio');
+  const fim = document.getElementById('cfg-hora-fim');
+  if (ini) ini.value = 8;
+  if (fim) fim.value = 20;
+}
+
+async function carregarHorarioTrabalho() {
+  popularSelectsHora();
+  const barb = await fsGet('barbeiros', sessao.barbeiro_id).catch(() => null);
+  if (!barb) return;
+  const dias   = barb.dias_trabalho ?? [1, 2, 3, 4, 5, 6];
+  const inicio = barb.hora_inicio   ?? 8;
+  const fim    = barb.hora_fim      ?? 20;
+  const prazo  = barb.prazo_dias    ?? 30;
+
+  document.querySelectorAll('.dia-btn').forEach(btn => {
+    btn.classList.toggle('ativo', dias.includes(parseInt(btn.dataset.dia)));
+  });
+  const inicioSel = document.getElementById('cfg-hora-inicio');
+  const fimSel    = document.getElementById('cfg-hora-fim');
+  const prazoSel  = document.getElementById('cfg-prazo');
+  if (inicioSel) inicioSel.value = inicio;
+  if (fimSel)    fimSel.value    = fim;
+  if (prazoSel)  prazoSel.value  = prazo;
+}
+
+async function salvarHorarioTrabalho() {
+  const diasSelecionados = [];
+  document.querySelectorAll('.dia-btn').forEach(btn => {
+    if (btn.classList.contains('ativo')) diasSelecionados.push(parseInt(btn.dataset.dia));
+  });
+  const inicio = parseInt(document.getElementById('cfg-hora-inicio').value);
+  const fim    = parseInt(document.getElementById('cfg-hora-fim').value);
+  const prazo  = parseInt(document.getElementById('cfg-prazo').value);
+  if (inicio >= fim)              { toast('Horário de início deve ser menor que o fim!', 'error'); return; }
+  if (diasSelecionados.length === 0) { toast('Selecione pelo menos um dia de trabalho!', 'error'); return; }
+  try {
+    await fsUpdate('barbeiros', sessao.barbeiro_id, {
+      dias_trabalho: diasSelecionados,
+      hora_inicio: inicio, hora_fim: fim, prazo_dias: prazo
+    });
+    toast('Disponibilidade salva!', 'success');
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao salvar disponibilidade.', 'error');
+  }
+}
+
+// Dias trabalho toggle
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.dia-btn');
+  if (btn) btn.classList.toggle('ativo');
+});
+
+// ═══════════════════════════════════════════════
+// STATUS FIREBASE
+// ═══════════════════════════════════════════════
+function atualizarBadgeFirebase(online) {
+  const badge = document.getElementById('fb-badge');
+  if (!badge) return;
+  badge.className = 'fb-status' + (online ? '' : ' offline');
+  badge.innerHTML = `<span class="fb-dot"></span>${online ? 'FIREBASE ONLINE' : 'OFFLINE'}`;
+}
+
+// ═══════════════════════════════════════════════
+// INICIALIZAÇÃO
+// ═══════════════════════════════════════════════
+async function inicializarApp() {
+  try {
+    atualizarBadgeFirebase(navigator.onLine);
+    window.addEventListener('online',  () => atualizarBadgeFirebase(true));
+    window.addEventListener('offline', () => atualizarBadgeFirebase(false));
+
+    await initFirestore();
+    await carregarSelectBarbeiros();
+    carregarSessao();
+
+    if (sessao) {
+      if (sessao.tipo === 'cliente')      await abrirPainelCliente();
+      else if (sessao.tipo === 'admin')   await abrirPainelAdmin();
+      else                                ir('screen-escolha');
+    } else {
+      ir('screen-escolha');
+    }
+  } catch(err) {
+    console.error('Erro ao inicializar:', err);
+    toast('Erro de conexão com Firebase. Verifique o console.', 'error');
+    ir('screen-escolha');
+  } finally {
+    const loading = document.getElementById('loading');
+    if (loading) loading.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', inicializarApp);
+</script>
+</body>
+</html>
