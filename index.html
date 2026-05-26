@@ -1525,18 +1525,13 @@ async function renderMeusAgendamentos() {
 // CONFIRMAR AGENDAMENTO
 // ═══════════════════════════════════════════════
 async function enviarWhatsApp(tel, msg) {
-  // Usa o link universal wa.me que funciona tanto em PC quanto Celular (App/Web)
-  const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+  // O link api.whatsapp.com é o mais robusto para WebViews e APKs
+  const url = `https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`;
   
-  // No celular, o window.open pode falhar se não houver interação direta. 
-  // Usamos um link temporário para forçar a abertura se necessário.
-  const a = document.createElement('a');
-  a.href = url;
-  a.target = '_blank';
-  a.rel = 'noopener noreferrer';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Para evitar o erro de esquema de URL desconhecido em WebViews, 
+  // usamos o redirecionamento direto da janela atual em vez de window.open
+  // Isso força o sistema operacional a interceptar o link HTTPS e abrir o App
+  window.location.href = url;
 }
 
 async function confirmarAgendamento() {
@@ -1610,18 +1605,15 @@ async function confirmarAgendamento() {
     const msgCliente = `Olá ${sessao.nome}! Seu horário foi agendado com sucesso na BLADE CUT.\n\n✂ *Serviço:* ${opt.dataset.nome}\n📅 *Data:* ${fmtDt(data)}\n⏰ *Hora:* ${hora}\n💈 *Barbeiro:* ${bNome}\n\nObrigado pela preferência! Nos vemos lá.`;
     const msgBarbeiro = `*NOVA RESERVA - BLADE CUT*\n\n👤 *Cliente:* ${sessao.nome}\n✂ *Serviço:* ${opt.dataset.nome}\n📅 *Data:* ${fmtDt(data)}\n⏰ *Hora:* ${hora}\n📱 *WhatsApp:* ${sessao.tel || 'Não informado'}`;
     
-    // Enviar WhatsApps automaticamente
+    // Enviar WhatsApp automaticamente
+    // Em APKs/WebViews, o redirecionamento direto é o único método 100% infalível.
+    // Como o cliente é quem está usando o app, priorizamos a confirmação dele.
+    // O barbeiro já recebe a notificação push nativa em tempo real no celular dele.
     setTimeout(() => {
-      // Abre o WhatsApp do cliente
-      if (sessao.tel) enviarWhatsApp(sessao.tel, msgCliente);
-      
-      // Abre o WhatsApp do barbeiro logo em seguida
-      if (barb && barb.tel) {
-        setTimeout(() => {
-          enviarWhatsApp(barb.tel, msgBarbeiro);
-        }, 1000);
+      if (sessao.tel) {
+        enviarWhatsApp(sessao.tel, msgCliente);
       }
-    }, 1000);
+    }, 1200);
 
     setDates();
     await populateHorasDisponiveis();
