@@ -1525,8 +1525,18 @@ async function renderMeusAgendamentos() {
 // CONFIRMAR AGENDAMENTO
 // ═══════════════════════════════════════════════
 async function enviarWhatsApp(tel, msg) {
-  const url = `https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
+  // Usa o link universal wa.me que funciona tanto em PC quanto Celular (App/Web)
+  const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+  
+  // No celular, o window.open pode falhar se não houver interação direta. 
+  // Usamos um link temporário para forçar a abertura se necessário.
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
 
 async function confirmarAgendamento() {
